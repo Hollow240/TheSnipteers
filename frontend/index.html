@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn Anything - Constellation Home</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body {
+            background-color: #0b0c10;
+            color: #ffffff;
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #constellation {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            display: block;
+        }
+        .container {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            max-width: 600px;
+            width: 90%;
+            padding: 2rem;
+            background: rgba(15, 23, 42, 0.45);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(135deg, #ffffff 30%, #a5f3fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.03em;
+        }
+        p {
+            color: #94a3b8;
+            font-size: 1rem;
+            margin-bottom: 2rem;
+            font-weight: 300;
+        }
+        .search-form {
+            display: flex;
+            gap: 0.75rem;
+            width: 100%;
+        }
+        .search-input {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(15, 23, 42, 0.6);
+            color: #ffffff;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .search-input:focus {
+            border-color: #00e5ff;
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .search-button {
+            padding: 1rem 2rem;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            color: #0b0c10;
+            font-family: inherit;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.3);
+        }
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 229, 255, 0.4);
+        }
+        .search-button:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <canvas id="constellation"></canvas>
+    
+    <div class="container">
+        <h1>Learn Anything</h1>
+        <p>Generate an AI-powered learning path for any topic</p>
+        <form class="search-form" id="search-form">
+            <input type="text" class="search-input" id="search-query" placeholder="I want to learn..." required autocomplete="off">
+            <button type="submit" class="search-button">Explore</button>
+        </form>
+    </div>
+
+    <!-- D3.js via CDN -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script>
+        // ponytail: using HTML canvas instead of SVG to avoid DOM creation overhead and keep code footprint small
+        const canvas = document.getElementById('constellation');
+        const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        // Handle window resizing
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            simulation.force('center', d3.forceCenter(width / 2, height / 2));
+            simulation.alpha(0.3).restart();
+        });
+
+        // Dummy constellation topic list
+        const topics = ["Math", "Physics", "AI", "History", "Coding", "Music", "Art", "Biology", "Economics", "Philosophy", "Astronomy", "Design"];
+        const nodes = topics.map((name, id) => ({ id, name }));
+        const links = [];
+        
+        // ponytail: link nodes sequentially to form a simple connected backbone without complex link generators
+        for (let i = 1; i < nodes.length; i++) {
+            links.push({ source: Math.floor(Math.random() * i), target: i });
+        }
+
+        const simulation = d3.forceSimulation(nodes)
+            .force('link', d3.forceLink(links).id(d => d.id).distance(140))
+            .force('charge', d3.forceManyBody().strength(-40))
+            .force('center', d3.forceCenter(width / 2, height / 2))
+            .velocityDecay(0.15); // ponytail: higher decay for slower, more celestial motion
+
+        // ponytail: keep simulation warm continuously so the nodes drift slowly forever
+        simulation.alphaTarget(0.02).restart();
+
+        simulation.on('tick', () => {
+            ctx.clearRect(0, 0, width, height);
+
+            // Draw links
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.lineWidth = 1;
+            links.forEach(link => {
+                ctx.beginPath();
+                ctx.moveTo(link.source.x, link.source.y);
+                ctx.lineTo(link.target.x, link.target.y);
+                ctx.stroke();
+            });
+
+            // Draw nodes
+            nodes.forEach(node => {
+                ctx.beginPath();
+                ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = '#00e5ff'; // neon blue node
+                ctx.shadowColor = '#00e5ff';
+                ctx.shadowBlur = 8;
+                ctx.fill();
+                ctx.shadowBlur = 0; // turn off shadow to keep text drawing fast
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.font = '300 12px Outfit, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(node.name, node.x, node.y - 12);
+            });
+        });
+
+        // ponytail: hold course search topic globally
+        let currentSearchTopic = '';
+        let activeNodeEl = null;
+        // ponytail: dynamically target localhost when loaded locally as file:// to prevent endpoint resolution errors
+        const API_BASE = window.location.protocol.startsWith('file') ? 'http://localhost:8082' : '';
+
+        // ponytail: inject CSS styles dynamically via JS to avoid modifying the HTML stylesheet block
+        const injectStyles = () => {
+            const style = document.createElement('style');
+            style.id = 'tree-styles';
+            style.textContent = `
+                #tree-container {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100vw;
+                    height: 100vh;
+                    overflow-y: auto;
+                    padding: 4rem 2rem;
+                    z-index: 10;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                }
+                .tree-row {
+                    display: flex;
+                    justify-content: center;
+                    gap: 3rem;
+                    margin-bottom: 5rem;
+                    width: 100%;
+                    position: relative;
+                }
+                .node-card {
+                    width: 160px;
+                    padding: 1.25rem 1rem;
+                    border-radius: 16px;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    position: relative;
+                    z-index: 20;
+                    font-family: 'Outfit', sans-serif;
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+                }
+                .node-card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 10px 25px rgba(0, 229, 255, 0.25);
+                }
+                .node-card h3 {
+                    font-size: 1rem;
+                    font-weight: 600;
+                    margin-bottom: 0.25rem;
+                }
+                .node-card p {
+                    font-size: 0.75rem;
+                    color: rgba(255, 255, 255, 0.7);
+                    margin: 0;
+                }
+                .node-completed {
+                    border: 2px solid #10b981;
+                    background: rgba(16, 185, 129, 0.12);
+                    color: #ffffff;
+                }
+                .node-in_progress {
+                    border: 2px solid #00e5ff;
+                    background: rgba(0, 229, 255, 0.12);
+                    color: #ffffff;
+                }
+                .node-locked {
+                    border: 2px solid #475569;
+                    background: rgba(30, 41, 59, 0.4);
+                    color: #94a3b8;
+                    opacity: 0.65;
+                }
+                #connector-svg {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    pointer-events: none;
+                    z-index: 5;
+                }
+                .back-btn {
+                    position: fixed;
+                    top: 1.5rem;
+                    left: 1.5rem;
+                    padding: 0.75rem 1.5rem;
+                    background: rgba(30, 41, 59, 0.8);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 12px;
+                    color: white;
+                    cursor: pointer;
+                    z-index: 30;
+                    font-family: inherit;
+                    transition: all 0.2s;
+                }
+                .back-btn:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                }
+                .node-overlay {
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    width: 90%;
+                    max-width: 400px;
+                    padding: 2rem;
+                    background: rgba(15, 23, 42, 0.95);
+                    border: 1px solid rgba(0, 229, 255, 0.3);
+                    border-radius: 20px;
+                    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+                    z-index: 100;
+                    text-align: center;
+                    backdrop-filter: blur(10px);
+                }
+                .node-overlay h2 {
+                    font-size: 1.5rem;
+                    margin-bottom: 1rem;
+                    color: #00e5ff;
+                }
+                .node-overlay p {
+                    font-size: 1rem;
+                    color: #cbd5e1;
+                    line-height: 1.5;
+                    margin-bottom: 1.5rem;
+                }
+                .node-overlay button {
+                    padding: 0.5rem 1.5rem;
+                    background: #00e5ff;
+                    color: #0b0c10;
+                    border: none;
+                    border-radius: 8px;
+                    font-weight: 600;
+                    cursor: pointer;
+                }
+                .side-panel {
+                    position: fixed;
+                    top: 0;
+                    right: 0;
+                    width: 30%;
+                    min-width: 320px;
+                    height: 100vh;
+                    background: rgba(15, 23, 42, 0.95);
+                    border-left: 1px solid rgba(255, 255, 255, 0.08);
+                    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+                    z-index: 50;
+                    transform: translateX(100%);
+                    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    display: flex;
+                    flex-direction: column;
+                    padding: 2rem;
+                    box-sizing: border-box;
+                    backdrop-filter: blur(12px);
+                }
+                .side-panel.open {
+                    transform: translateX(0);
+                }
+                .panel-close-btn {
+                    align-self: flex-end;
+                    background: none;
+                    border: none;
+                    color: #94a3b8;
+                    font-size: 2rem;
+                    cursor: pointer;
+                    line-height: 1;
+                    padding: 0;
+                    margin-bottom: 1rem;
+                }
+                .panel-close-btn:hover {
+                    color: white;
+                }
+                .panel-content {
+                    flex: 1;
+                    overflow-y: auto;
+                    margin-bottom: 2rem;
+                }
+                .panel-title {
+                    font-size: 1.5rem;
+                    color: #00e5ff;
+                    margin-bottom: 1rem;
+                }
+                .panel-body {
+                    color: #cbd5e1;
+                    font-size: 0.95rem;
+                    line-height: 1.6;
+                }
+                .panel-body h1, .panel-body h2, .panel-body h3 {
+                    color: #ffffff;
+                    margin-top: 1.5rem;
+                    margin-bottom: 0.5rem;
+                }
+                .panel-body p {
+                    margin-bottom: 1rem;
+                }
+                .panel-body ul, .panel-body ol {
+                    margin-bottom: 1rem;
+                    padding-left: 1.25rem;
+                }
+                .panel-body li {
+                    margin-bottom: 0.5rem;
+                }
+                .panel-complete-btn {
+                    padding: 1rem;
+                    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
+                    width: 100%;
+                }
+                .panel-complete-btn:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+                }
+            `;
+            document.head.appendChild(style);
+        };
+
+        // ponytail: function to calculate DAG levels of nodes based on links
+        const calculateNodeLevels = (nodes, links) => {
+            const inDegree = {};
+            const adj = {};
+            nodes.forEach(n => {
+                inDegree[n.id] = 0;
+                adj[n.id] = [];
+            });
+            links.forEach(l => {
+                const src = typeof l.source === 'object' ? l.source.id : l.source;
+                const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+                if (adj[src]) adj[src].push(tgt);
+                if (inDegree[tgt] !== undefined) inDegree[tgt]++;
+            });
+
+            const levels = {};
+            const queue = [];
+            nodes.forEach(n => {
+                if (inDegree[n.id] === 0) {
+                    levels[n.id] = 0;
+                    queue.push(n.id);
+                }
+            });
+
+            while (queue.length > 0) {
+                const curr = queue.shift();
+                const currLevel = levels[curr];
+                adj[curr].forEach(child => {
+                    levels[child] = Math.max(levels[child] || 0, currLevel + 1);
+                    queue.push(child);
+                });
+            }
+
+            // Fallback for disconnected nodes
+            nodes.forEach(n => {
+                if (levels[n.id] === undefined) {
+                    levels[n.id] = 0;
+                }
+            });
+
+            return levels;
+        };
+
+        // ponytail: determine line color based on parent status class
+        const statusColor = (el) => {
+            if (el.classList.contains('node-completed')) return 'rgba(16, 185, 129, 0.4)';
+            if (el.classList.contains('node-in_progress')) return 'rgba(0, 229, 255, 0.4)';
+            return 'rgba(71, 85, 105, 0.3)';
+        };
+
+        // ponytail: simple interactive modal overlay
+        const showOverlay = (title, description) => {
+            const existing = document.querySelector('.node-overlay');
+            if (existing) existing.remove();
+
+            const overlay = document.createElement('div');
+            overlay.className = 'node-overlay';
+            
+            const h2 = document.createElement('h2');
+            h2.textContent = title;
+            overlay.appendChild(h2);
+
+            const p = document.createElement('p');
+            p.textContent = description || 'No description available.';
+            overlay.appendChild(p);
+
+            const btn = document.createElement('button');
+            btn.textContent = 'Close';
+            btn.onclick = () => overlay.remove();
+            overlay.appendChild(btn);
+
+            document.body.appendChild(overlay);
+        };
+
+        // ponytail: inject side-panel HTML dynamically to keep initial page load tiny
+        const injectSidePanel = () => {
+            if (document.getElementById('side-panel')) return;
+            const panel = document.createElement('div');
+            panel.id = 'side-panel';
+            panel.className = 'side-panel';
+            panel.innerHTML = `
+                <button class="panel-close-btn">&times;</button>
+                <div class="panel-content">
+                    <h2 class="panel-title">Select a node to begin</h2>
+                    <div class="panel-body"></div>
+                </div>
+                <button class="panel-complete-btn" style="display: none;">Mark as Complete</button>
+            `;
+            document.body.appendChild(panel);
+            
+            panel.querySelector('.panel-close-btn').addEventListener('click', () => {
+                panel.classList.remove('open');
+            });
+        };
+
+        // ponytail: fetch lesson markdown from Feynman Tutor API and display in side-panel
+        const openLessonPanel = (node, topic) => {
+            injectSidePanel();
+            const panel = document.getElementById('side-panel');
+            const titleEl = panel.querySelector('.panel-title');
+            const bodyEl = panel.querySelector('.panel-body');
+            const completeBtn = panel.querySelector('.panel-complete-btn');
+
+            titleEl.textContent = node.name;
+            bodyEl.innerHTML = '<p>Loading lesson from Feynman Tutor...</p>';
+            completeBtn.style.display = 'none';
+            panel.classList.add('open');
+
+            activeNodeEl = document.getElementById(`node-${node.id}`);
+
+            fetch(API_BASE + '/api/get-lesson', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    topic: topic,
+                    nodeTitle: node.name,
+                    nodeDescription: node.description || ''
+                })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to fetch lesson: ' + response.statusText);
+                }
+                return response.text();
+            })
+            .then(markdown => {
+                // ponytail: use marked.js from CDN to parse markdown cleanly to HTML
+                bodyEl.innerHTML = marked.parse(markdown);
+                
+                // Show completion button if the node is in progress
+                if (activeNodeEl && activeNodeEl.classList.contains('node-in_progress')) {
+                    completeBtn.style.display = 'block';
+                    completeBtn.onclick = () => {
+                        // Mark current card as completed
+                        activeNodeEl.className = 'node-card node-completed';
+                        const desc = activeNodeEl.querySelector('p');
+                        if (desc) desc.textContent = 'completed';
+                        
+                        // ponytail: unlock the next sibling card on the same row dynamically as a simple progression path shortcut
+                        const nextSibling = activeNodeEl.nextElementSibling;
+                        if (nextSibling && nextSibling.classList.contains('node-locked')) {
+                            nextSibling.className = 'node-card node-in_progress';
+                            const nextDesc = nextSibling.querySelector('p');
+                            if (nextDesc) nextDesc.textContent = 'in progress';
+                        }
+
+                        panel.classList.remove('open');
+                    };
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching lesson:', error);
+                bodyEl.innerHTML = `<p style="color: #ef4444;">Error loading lesson: ${error.message}</p>`;
+            });
+        };
+
+        // ponytail: render the node tree layout and SVG connectors dynamically
+        const renderGraph = (json) => {
+            if (!document.getElementById('tree-styles')) {
+                injectStyles();
+            }
+
+            // Hide the search bar container
+            document.querySelector('.container').style.display = 'none';
+
+            // Create or clear tree-container
+            let treeContainer = document.getElementById('tree-container');
+            if (treeContainer) {
+                treeContainer.innerHTML = '';
+                treeContainer.style.display = 'flex';
+            } else {
+                treeContainer = document.createElement('div');
+                treeContainer.id = 'tree-container';
+                document.body.appendChild(treeContainer);
+            }
+
+            // Add back button
+            const backBtn = document.createElement('button');
+            backBtn.className = 'back-btn';
+            backBtn.textContent = '← Back';
+            backBtn.onclick = () => {
+                treeContainer.style.display = 'none';
+                const sidePanel = document.getElementById('side-panel');
+                if (sidePanel) sidePanel.classList.remove('open');
+                document.querySelector('.container').style.display = 'block';
+                canvas.style.display = 'block';
+                simulation.alpha(0.3).restart();
+            };
+            treeContainer.appendChild(backBtn);
+
+            // Add SVG for connectors
+            const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            svg.id = 'connector-svg';
+            treeContainer.appendChild(svg);
+
+            // Calculate levels
+            const levels = calculateNodeLevels(json.nodes, json.links);
+
+            // Group nodes by levels
+            const rows = [];
+            json.nodes.forEach(n => {
+                const lvl = levels[n.id];
+                if (!rows[lvl]) rows[lvl] = [];
+                rows[lvl].push(n);
+            });
+
+            // ponytail: assign statuses sequentially for the MVP
+            const getStatus = (index) => {
+                if (index === 0) return 'in_progress';
+                if (index < 3) return 'completed';
+                return 'locked';
+            };
+
+            // Render each row and card
+            rows.forEach((rowNodes, lvlIdx) => {
+                if (!rowNodes) return;
+                const rowEl = document.createElement('div');
+                rowEl.className = 'tree-row';
+                
+                rowNodes.forEach((node, nodeIdx) => {
+                    const status = getStatus(nodeIdx + lvlIdx * 2);
+                    const nodeEl = document.createElement('div');
+                    nodeEl.className = `node-card node-${status}`;
+                    nodeEl.id = `node-${node.id}`;
+                    
+                    const titleEl = document.createElement('h3');
+                    titleEl.textContent = node.name;
+                    nodeEl.appendChild(titleEl);
+
+                    const descEl = document.createElement('p');
+                    descEl.textContent = status.replace('_', ' ');
+                    nodeEl.appendChild(descEl);
+
+                    // ponytail: clicking an unlocked node fetches the lesson, locked shows overlay
+                    nodeEl.addEventListener('click', () => {
+                        if (status === 'locked') {
+                            showOverlay('Locked Node', 'Complete the preceding topics first to unlock this lesson!');
+                            return;
+                        }
+                        openLessonPanel(node, currentSearchTopic);
+                    });
+
+                    rowEl.appendChild(nodeEl);
+                });
+                treeContainer.appendChild(rowEl);
+            });
+
+            // Draw SVG paths after elements are in DOM
+            setTimeout(() => {
+                const containerRect = treeContainer.getBoundingClientRect();
+                svg.setAttribute('width', treeContainer.scrollWidth);
+                svg.setAttribute('height', treeContainer.scrollHeight);
+
+                json.links.forEach(l => {
+                    const src = typeof l.source === 'object' ? l.source.id : l.source;
+                    const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+                    
+                    const parentEl = document.getElementById(`node-${src}`);
+                    const childEl = document.getElementById(`node-${tgt}`);
+                    
+                    if (parentEl && childEl) {
+                        const parentRect = parentEl.getBoundingClientRect();
+                        const childRect = childEl.getBoundingClientRect();
+                        
+                        const x1 = parentRect.left + parentRect.width / 2 - containerRect.left + treeContainer.scrollLeft;
+                        const y1 = parentRect.bottom - containerRect.top + treeContainer.scrollTop;
+                        const x2 = childRect.left + childRect.width / 2 - containerRect.left + treeContainer.scrollLeft;
+                        const y2 = childRect.top - containerRect.top + treeContainer.scrollTop;
+                        
+                        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        const d = `M ${x1} ${y1} C ${x1} ${(y1 + y2)/2}, ${x2} ${(y1 + y2)/2}, ${x2} ${y2}`;
+                        path.setAttribute('d', d);
+                        path.setAttribute('stroke', statusColor(parentEl));
+                        path.setAttribute('stroke-width', '2');
+                        path.setAttribute('fill', 'none');
+                        svg.appendChild(path);
+                    }
+                });
+            }, 50);
+        };
+
+        // Search Bar Event Listener
+        document.getElementById('search-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const queryInput = document.getElementById('search-query');
+            const submitButton = document.querySelector('.search-button');
+            const query = queryInput.value.trim();
+            
+            // ponytail: keep loading state simple by updating input placeholder and disabling controls
+            const originalPlaceholder = queryInput.placeholder;
+            queryInput.disabled = true;
+            submitButton.disabled = true;
+            queryInput.value = '';
+            queryInput.placeholder = 'Generating...';
+
+            // ponytail: save search query globally to pass to Feynman Tutor endpoint
+            currentSearchTopic = query;
+
+            // ponytail: clear and show the side panel to stream JSON chunks into it
+            injectSidePanel();
+            const panel = document.getElementById('side-panel');
+            const titleEl = panel.querySelector('.panel-title');
+            const bodyEl = panel.querySelector('.panel-body');
+            const completeBtn = panel.querySelector('.panel-complete-btn');
+            
+            titleEl.textContent = 'Generating Curriculum...';
+            bodyEl.innerHTML = '';
+            completeBtn.style.display = 'none';
+            panel.classList.add('open');
+
+            fetch(API_BASE + '/api/generate-path', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ topic: query })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok: ' + response.statusText);
+                }
+                
+                // ponytail: read response body as a stream to enable real-time text decoding
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let accumulatedText = '';
+
+                // read function to consume stream chunk by chunk
+                function read() {
+                    return reader.read().then(({ done, value }) => {
+                        if (done) {
+                            // Stream complete: parse accumulated JSON and render graph
+                            canvas.style.display = 'none';
+                            simulation.stop();
+                            panel.classList.remove('open');
+                            
+                            try {
+                                const data = JSON.parse(accumulatedText);
+                                renderGraph(data);
+                            } catch (e) {
+                                console.error('Failed to parse completed stream text as JSON:', e);
+                                alert('Failed to parse curriculum data. Raw: ' + accumulatedText);
+                            }
+                            return;
+                        }
+
+                        const chunk = decoder.decode(value, { stream: true });
+                        accumulatedText += chunk;
+                        
+                        // Append each chunk to the side-panel innerHTML immediately
+                        bodyEl.innerHTML += chunk;
+                        
+                        // Recurse to read next chunk
+                        return read();
+                    });
+                }
+                return read();
+            })
+            .catch(error => {
+                console.error('Error fetching learning path:', error);
+                alert('Failed to generate path: ' + error.message);
+                panel.classList.remove('open');
+            })
+            .finally(() => {
+                queryInput.disabled = false;
+                submitButton.disabled = false;
+                queryInput.placeholder = originalPlaceholder;
+                queryInput.value = query;
+            });
+        });
+    </script>
+</body>
+</html>
