@@ -1086,14 +1086,33 @@
                                 tutorPanel.classList.remove('open');
 
                                 try {
-                                    const data = JSON.parse(accumulatedText);
+                                    let cleanJsonText = accumulatedText.trim();
+                                    
+                                    // 1. If Gemini wrapped the response in a ```json markdown block, strip it out cleanly
+                                    if (cleanJsonText.includes("```")) {
+                                        cleanJsonText = cleanJsonText.replace(/```json|```/g, "").trim();
+                                    }
+                                    
+                                    // 2. Extra Insurance: Extract strictly everything from the first '{' or '[' to the last '}' or ']'
+                                    const firstBracket = cleanJsonText.search(/[\{\[]/);
+                                    const lastBracket = cleanJsonText.match(/[\}\]][^]*$/);
+                                    
+                                    if (firstBracket !== -1 && lastBracket) {
+                                        const lastBracketIndex = cleanJsonText.lastIndexOf(lastBracket[0][0]);
+                                        cleanJsonText = cleanJsonText.substring(firstBracket, lastBracketIndex + 1);
+                                    }
+
+                                    // 3. Now parse the guaranteed clean JSON string
+                                    const parsedData = JSON.parse(cleanJsonText);
+                                    
                                     document.querySelector('.container').style.display = 'none';
-                                    renderGraph(data);
-                                } catch (err) {
-                                    console.error('Failed to parse curriculum JSON:', err);
+                                    renderGraph(parsedData);
+
+                                } catch (parseError) {
+                                    console.error("JSON Clean Engine Failure: ", parseError);
                                     panelBody.innerHTML = `
                                         <p class="panel-terminal-line">> [ PARSE ERROR ]</p>
-                                        <p class="panel-terminal-line" style="color:#ef4444;">> ${err.message}</p>
+                                        <p class="panel-terminal-line" style="color:#ef4444;">> ${parseError.message}</p>
                                     `;
                                     tutorPanel.classList.add('open');
                                 }
