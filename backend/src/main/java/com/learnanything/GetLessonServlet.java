@@ -73,7 +73,7 @@ public class GetLessonServlet extends HttpServlet {
             return;
         }
 
-        String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+        String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + apiKey;
 
         String prompt = "You are a world-class tutor using the Feynman Technique. Explain the sub-topic '" + escapeJson(nodeTitle) + 
                 "' within the overall course '" + escapeJson(topic) + "'. " +

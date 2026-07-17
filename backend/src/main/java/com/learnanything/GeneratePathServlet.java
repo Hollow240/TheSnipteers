@@ -16,7 +16,7 @@ import java.time.Duration;
 public class GeneratePathServlet extends HttpServlet {
 
     private static final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(10))
+            .connectTimeout(Duration.ofSeconds(30))
             .build();
 
     @Override
@@ -111,7 +111,7 @@ public class GeneratePathServlet extends HttpServlet {
             return;
         }
 
-        String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?key=" + apiKey;
+        String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent?key=" + apiKey;
 
         // ponytail: demand a deep DAG with explicit tier counts so the skill tree renders with real depth
         String prompt = "You are a world-class curriculum designer. Generate a comprehensive, detailed learning path DAG (Directed Acyclic Graph) for mastering: " + escapeJson(topic) + ".\n\n" +
@@ -142,7 +142,7 @@ public class GeneratePathServlet extends HttpServlet {
                 .uri(URI.create(geminiUrl))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(jsonPayload))
-                .timeout(Duration.ofSeconds(20))
+                .timeout(Duration.ofSeconds(60)) // ponytail: 60s for expanded 12-15 node DAG generation
                 .build();
 
         resp.setStatus(HttpServletResponse.SC_OK);
