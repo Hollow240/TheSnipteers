@@ -113,23 +113,23 @@ public class GeneratePathServlet extends HttpServlet {
 
         String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + apiKey;
 
-        // ponytail: demand a deep DAG with explicit tier counts and resources so the skill tree renders with real depth and references
-        String prompt = "You are a world-class curriculum designer. Generate a comprehensive, detailed learning path DAG (Directed Acyclic Graph) for mastering: " + escapeJson(topic) + ".\n\n" +
-                "STRICT REQUIREMENTS:\n" +
-                "1. Generate EXACTLY 12-15 distinct nodes.\n" +
-                "2. Organize them into 3 explicit tiers:\n" +
-                "   - Tier 1 BEGINNER (4-5 nodes): Foundational concepts, zero prior knowledge required.\n" +
-                "   - Tier 2 INTERMEDIATE (4-5 nodes): Core techniques, requires Tier 1 completion.\n" +
-                "   - Tier 3 ADVANCED (4-5 nodes): Expert-level mastery, requires Tier 2 completion.\n" +
-                "3. Each node must contain:\n" +
-                "   - 'id': unique string id\n" +
-                "   - 'name': short specific name (2-4 words)\n" +
-                "   - 'description': one-sentence description\n" +
-                "   - 'resources': array of 2-3 valid educational markdown links related to the node topic (e.g., ['[MDN Docs](https://developer.mozilla.org)', '[GitHub Source](https://github.com/Hollow240/TheSnipteers)'])\n" +
-                "4. Links must reflect real conceptual prerequisites — not just sequential numbering.\n" +
-                "5. Every node must be reachable from at least one root node.\n\n" +
-                "Return ONLY a valid JSON object, no markdown fences, no commentary:\n" +
-                "{ \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"resources\": [\"string\"] }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";
+        // ponytail: demand a deep DAG with explicit tier counts, status initializers, and resources
+        String prompt = "You are an expert academic curriculum architect. The user wants to learn about: '" + escapeJson(topic) + "'.\n\n"
+                  + "Generate a deeply structured, comprehensive Directed Acyclic Graph (DAG) for this subject in strict JSON format.\n"
+                  + "CRITICAL CONSTRAINTS:\n"
+                  + "1. Scale the graph to include at least 12 to 15 highly distinct nodes.\n"
+                  + "2. Group the nodes logically into 3 progressive learning tiers: 'Beginner' (Tier 1), 'Intermediate' (Tier 2), and 'Advanced' (Tier 3).\n"
+                  + "3. Create explicit dependency links between prerequisites (e.g., Tier 1 nodes must connect to Tier 2 nodes).\n"
+                  + "4. For EACH individual node, include exactly these fields:\n"
+                  + "   - 'id': unique string slug (e.g., 'intro-to-variables')\n"
+                  + "   - 'name': crisp, clean display title (e.g., 'Variables & Control Flow')\n"
+                  + "   - 'description': one-sentence description explaining what the node is about\n"
+                  + "   - 'tier': 1, 2, or 3\n"
+                  + "   - 'status': Set the first 2-3 Tier 1 nodes to 'IN_PROGRESS' or 'COMPLETED', and all subsequent dependent nodes strictly to 'LOCKED'.\n"
+                  + "   - 'resources': An array containing 2 markdown links pointing to high-quality external documentation or source repositories.\n\n"
+                  + "Ensure your output contains ONLY the raw JSON string. Do not wrap it in markdown code blocks like ```json ... ``` as it will break the Java parsing buffer.\n\n"
+                  + "JSON Schema:\n"
+                  + "{ \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"tier\": 1, \"status\": \"string\", \"resources\": [\"string\"] }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";
 
         String jsonPayload = "{"
                 + "\"contents\":[{"
