@@ -141,7 +141,7 @@ public class GeneratePathServlet extends HttpServlet {
                 + "}],"
                 + "\"generationConfig\":{"
                 + "\"responseMimeType\":\"application/json\","
-                + "\"maxOutputTokens\":4000"
+                + "\"maxOutputTokens\":8192"
                 + "}"
                 + "}";
 
@@ -251,6 +251,8 @@ public class GeneratePathServlet extends HttpServlet {
     private static String cleanJson(String input) {
         if (input == null) return null;
         String trimmed = input.trim();
+
+        // Strip leading markdown fence (```json or ```)
         if (trimmed.startsWith("```")) {
             int firstNewline = trimmed.indexOf('\n');
             if (firstNewline != -1) {
@@ -258,11 +260,30 @@ public class GeneratePathServlet extends HttpServlet {
             } else {
                 trimmed = trimmed.substring(3);
             }
-            if (trimmed.endsWith("```")) {
-                trimmed = trimmed.substring(0, trimmed.length() - 3);
-            }
             trimmed = trimmed.trim();
         }
+
+        // Strip ANY trailing backticks (Gemini sometimes outputs `` or ``` after closing brace)
+        while (trimmed.endsWith("`")) {
+            trimmed = trimmed.substring(0, trimmed.length() - 1);
+        }
+        trimmed = trimmed.trim();
+
+        // Final safety net: extract from first { or [ to last } or ]
+        int firstBrace = -1;
+        for (int i = 0; i < trimmed.length(); i++) {
+            char c = trimmed.charAt(i);
+            if (c == '{' || c == '[') { firstBrace = i; break; }
+        }
+        int lastBrace = -1;
+        for (int i = trimmed.length() - 1; i >= 0; i--) {
+            char c = trimmed.charAt(i);
+            if (c == '}' || c == ']') { lastBrace = i; break; }
+        }
+        if (firstBrace != -1 && lastBrace != -1 && lastBrace > firstBrace) {
+            trimmed = trimmed.substring(firstBrace, lastBrace + 1);
+        }
+
         return trimmed;
     }
 
