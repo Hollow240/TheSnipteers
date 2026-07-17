@@ -1085,8 +1085,9 @@
                                 simulation.stop();
                                 tutorPanel.classList.remove('open');
 
+                                let cleanJsonText = '';
                                 try {
-                                    let cleanJsonText = accumulatedText.trim();
+                                    cleanJsonText = accumulatedText.trim();
                                     
                                     // 1. If Gemini wrapped the response in a ```json markdown block, strip it out cleanly
                                     if (cleanJsonText.includes("```")) {
@@ -1113,11 +1114,23 @@
 
                                 } catch (parseError) {
                                     console.error("JSON Clean Engine Failure: ", parseError);
+                                    console.log("Failing cleanJsonText: ", cleanJsonText);
+                                    
+                                    const isTruncated = !cleanJsonText.endsWith("}");
                                     panelBody.innerHTML = `
                                         <p class="panel-terminal-line">> [ PARSE ERROR ]</p>
-                                        <p class="panel-terminal-line" style="color:#ef4444;">> ${parseError.message}</p>
+                                        <p class="panel-terminal-line" style="color:#ef4444;">> ${isTruncated ? "Connection interrupted or response truncated. Auto-retrying..." : parseError.message}</p>
                                     `;
                                     tutorPanel.classList.add('open');
+                                    
+                                    // ponytail: automatically trigger a clean retry after 2 seconds
+                                    setTimeout(() => {
+                                        const streamLine = document.createElement('p');
+                                        streamLine.className = 'panel-terminal-line blink';
+                                        streamLine.textContent = '> [ RETRYING GENERATION... ]';
+                                        panelBody.appendChild(streamLine);
+                                        generateNewCurriculum(currentSearchTopic);
+                                    }, 2000);
                                 }
                                 return;
                             }

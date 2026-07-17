@@ -13,7 +13,11 @@ public class Launcher {
             port = Integer.parseInt(portEnv);
         }
         
-        Server server = new Server(port);
+        Server server = new Server();
+        org.eclipse.jetty.server.ServerConnector connector = new org.eclipse.jetty.server.ServerConnector(server);
+        connector.setPort(port);
+        connector.setIdleTimeout(120000); // 120 seconds (2 minutes) to prevent early connection cutoff during long AI generation
+        server.addConnector(connector);
         ServletContextHandler context = new ServletContextHandler(ServletContextHandler.SESSIONS);
         context.setContextPath("/");
         
