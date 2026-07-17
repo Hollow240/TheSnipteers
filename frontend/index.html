@@ -787,7 +787,7 @@
                         <div style="margin-top: 30px; border-top: 1px solid #222; padding-top: 15px;">
                             <span style="color: #666; font-size: 11px; display: block; margin-bottom: 8px;">EXTERNAL RESOURCES:</span>
                             <a href="https://github.com/Hollow240/TheSnipteers" target="_blank" style="color: #fff; text-decoration: none; font-size: 13px; font-family: monospace; display: block; margin-bottom: 6px;">[ PROJECT SOURCE GITHUB ↗ ]</a>
-                            ${node.resources ? node.resources.map(res => `<div style="font-family: monospace; font-size: 13px; margin-top: 4px; color: #888;">[ RESOURCE: ${marked.parseInline(res)} ]</div>`).join('') : ''}
+                            ${node.resources ? (typeof node.resources === 'string' ? node.resources.split('; ') : node.resources).map(res => `<div style="font-family: monospace; font-size: 13px; margin-top: 4px; color: #888;">[ RESOURCE: ${marked.parseInline(res)} ]</div>`).join('') : ''}
                         </div>
                     `;
                     panelBody.innerHTML += resourcesHtml;
@@ -1101,6 +1101,9 @@
                                         const lastBracketIndex = cleanJsonText.lastIndexOf(lastBracket[0][0]);
                                         cleanJsonText = cleanJsonText.substring(firstBracket, lastBracketIndex + 1);
                                     }
+
+                                    // 2.5 Strip trailing commas before parsing to avoid standard JSON syntax errors
+                                    cleanJsonText = cleanJsonText.replace(/,\s*([\}\]])/g, '$1');
 
                                     // 3. Now parse the guaranteed clean JSON string
                                     const parsedData = JSON.parse(cleanJsonText);

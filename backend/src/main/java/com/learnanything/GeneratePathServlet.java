@@ -126,12 +126,12 @@ public class GeneratePathServlet extends HttpServlet {
                   + "   - 'description': one-sentence description explaining what the node is about\n"
                   + "   - 'tier': 1, 2, or 3\n"
                   + "   - 'status': Set the first 2-3 Tier 1 nodes to 'IN_PROGRESS' or 'COMPLETED', and all subsequent dependent nodes strictly to 'LOCKED'.\n"
-                  + "   - 'resources': An array containing 2 markdown links pointing to high-quality external documentation or source repositories.\n"
+                  + "   - 'resources': A single string containing 2 high-quality educational markdown links separated by a semicolon and space (e.g., '[MDN Docs](https://developer.mozilla.org); [GitHub Source](https://github.com/Hollow240/TheSnipteers)').\n"
                   + "5. NEVER use raw double quotes (\") inside any text values (like name or description). If you need quotes, use single quotes (').\n"
                   + "6. Strictly avoid trailing commas at the end of objects or arrays (e.g., [a, b,] is invalid).\n\n"
                   + "Ensure your output contains ONLY the raw JSON string. Do not wrap it in markdown code blocks like ```json ... ``` as it will break the Java parsing buffer.\n\n"
                   + "JSON Schema:\n"
-                  + "{ \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"tier\": 1, \"status\": \"string\", \"resources\": [\"string\"] }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";
+                  + "{ \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"tier\": 1, \"status\": \"string\", \"resources\": \"string\" }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";
 
         String jsonPayload = "{"
                 + "\"contents\":[{"
