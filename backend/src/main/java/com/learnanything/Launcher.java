@@ -26,11 +26,15 @@ public class Launcher {
         if (!new java.io.File(resourceBase).exists()) {
             resourceBase = "../frontend";
         }
-        
+        // Resolve to absolute path so Jetty DefaultServlet can locate files reliably
+        resourceBase = new java.io.File(resourceBase).getCanonicalPath();
+
         ServletHolder staticServlet = new ServletHolder("default", org.eclipse.jetty.ee10.servlet.DefaultServlet.class);
         staticServlet.setInitParameter("resourceBase", resourceBase);
         staticServlet.setInitParameter("dirAllowed", "false");
+        staticServlet.setInitParameter("welcomeServlets", "false");
         context.addServlet(staticServlet, "/");
+        context.setWelcomeFiles(new String[]{"index.html"});
         
         server.setHandler(context);
         
