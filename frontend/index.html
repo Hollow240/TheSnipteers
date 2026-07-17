@@ -1066,86 +1066,50 @@
             })
                 .then(response => {
                     if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
+                    return response.text();
+                })
+                .then(responseText => {
+                    canvas.style.display = 'none';
+                    simulation.stop();
+                    tutorPanel.classList.remove('open');
 
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let accumulatedText = '';
+                    let cleanJsonText = '';
+                    try {
+                        cleanJsonText = responseText.trim();
 
-                    // Append raw JSON chunks to panel body as they stream in
-                    const streamLine = document.createElement('p');
-                    streamLine.className = 'panel-terminal-line';
-                    streamLine.style.wordBreak = 'break-all';
-                    streamLine.style.opacity = '0.4';
-                    panelBody.appendChild(streamLine);
+                        // 1. Strip any markdown code fences (```json ... ```)
+                        if (cleanJsonText.includes("```")) {
+                            cleanJsonText = cleanJsonText.replace(/```json|```/g, "").trim();
+                        }
 
-                    function read() {
-                        return reader.read().then(({ done, value }) => {
-                            if (done) {
-                                canvas.style.display = 'none';
-                                simulation.stop();
-                                tutorPanel.classList.remove('open');
+                        // 2. Strip any trailing backticks left over
+                        cleanJsonText = cleanJsonText.replace(/`+$/, '').trim();
 
-                                let cleanJsonText = '';
-                                try {
-                                    cleanJsonText = accumulatedText.trim();
-                                    
-                                    // 1. If Gemini wrapped the response in a ```json markdown block, strip it out cleanly
-                                    if (cleanJsonText.includes("```")) {
-                                        cleanJsonText = cleanJsonText.replace(/```json|```/g, "").trim();
-                                    }
-                                    
-                                    // 2. Extra Insurance: Extract strictly everything from the first '{' or '[' to the last '}' or ']'
-                                    const firstBracket = cleanJsonText.search(/[\{\[]/);
-                                    const lastBracket = cleanJsonText.match(/[\}\]][^]*$/);
-                                    
-                                    if (firstBracket !== -1 && lastBracket) {
-                                        const lastBracketIndex = cleanJsonText.lastIndexOf(lastBracket[0][0]);
-                                        cleanJsonText = cleanJsonText.substring(firstBracket, lastBracketIndex + 1);
-                                    }
+                        // 3. Extract strictly from first { or [ to last } or ]
+                        const firstBracket = cleanJsonText.search(/[\{\[]/);
+                        const lastBracketMatch = cleanJsonText.match(/[\}\]][^\}\]]*$/);
+                        if (firstBracket !== -1 && lastBracketMatch) {
+                            const lastBracketIndex = cleanJsonText.lastIndexOf(lastBracketMatch[0][0]);
+                            cleanJsonText = cleanJsonText.substring(firstBracket, lastBracketIndex + 1);
+                        }
 
-                                    // 2.5 Strip trailing commas before parsing to avoid standard JSON syntax errors
-                                    cleanJsonText = cleanJsonText.replace(/,\s*([\}\]])/g, '$1');
+                        // 4. Strip trailing commas before closing brackets
+                        cleanJsonText = cleanJsonText.replace(/,\s*([\}\]])/g, '$1');
 
-                                    // 3. Now parse the guaranteed clean JSON string
-                                    const parsedData = JSON.parse(cleanJsonText);
-                                    
-                                    document.querySelector('.container').style.display = 'none';
-                                    renderGraph(parsedData);
+                        // 5. Parse and render
+                        const parsedData = JSON.parse(cleanJsonText);
+                        document.querySelector('.container').style.display = 'none';
+                        renderGraph(parsedData);
 
-                                } catch (parseError) {
-                                    console.error("JSON Clean Engine Failure: ", parseError);
-                                    console.log("Failing cleanJsonText: ", cleanJsonText);
-                                    
-                                    const isTruncated = !cleanJsonText.endsWith("}");
-                                    panelBody.innerHTML = `
-                                        <p class="panel-terminal-line">> [ PARSE ERROR ]</p>
-                                        <p class="panel-terminal-line" style="color:#ef4444;">> ${isTruncated ? "Connection interrupted or response truncated. Auto-retrying..." : parseError.message}</p>
-                                    `;
-                                    tutorPanel.classList.add('open');
-                                    
-                                    // ponytail: automatically trigger a clean retry after 2 seconds
-                                    setTimeout(() => {
-                                        const streamLine = document.createElement('p');
-                                        streamLine.className = 'panel-terminal-line blink';
-                                        streamLine.textContent = '> [ RETRYING GENERATION... ]';
-                                        panelBody.appendChild(streamLine);
-                                        generateNewCurriculum(currentSearchTopic);
-                                    }, 2000);
-                                }
-                                return;
-                            }
-
-                            const chunk = decoder.decode(value, { stream: true });
-                            accumulatedText += chunk;
-
-                            // Show truncated streaming preview
-                            const preview = accumulatedText.slice(-80).replace(/\n/g, ' ');
-                            streamLine.textContent = '> ' + preview;
-
-                            return read();
-                        });
+                    } catch (parseError) {
+                        console.error("JSON Parse Failure: ", parseError);
+                        console.log("Failing cleanJsonText: ", cleanJsonText);
+                        panelBody.innerHTML = `
+                            <p class="panel-terminal-line">> [ PARSE ERROR ]</p>
+                            <p class="panel-terminal-line" style="color:#ef4444;">> ${parseError.message}</p>
+                        `;
+                        tutorPanel.classList.add('open');
                     }
-                    return read();
                 })
                 .catch(error => {
                     console.error('Error fetching learning path:', error);
