@@ -111,7 +111,7 @@ public class GeneratePathServlet extends HttpServlet {
             return;
         }
 
-        String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:streamGenerateContent?key=" + apiKey;
+        String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + apiKey;
 
         // ponytail: demand a deep DAG with explicit tier counts so the skill tree renders with real depth
         String prompt = "You are a world-class curriculum designer. Generate a comprehensive, detailed learning path DAG (Directed Acyclic Graph) for mastering: " + escapeJson(topic) + ".\n\n" +
@@ -134,7 +134,8 @@ public class GeneratePathServlet extends HttpServlet {
                 + "}]"
                 + "}],"
                 + "\"generationConfig\":{"
-                + "\"responseMimeType\":\"application/json\""
+                + "\"responseMimeType\":\"application/json\","
+                + "\"maxOutputTokens\":4000"
                 + "}"
                 + "}";
 
@@ -152,70 +153,28 @@ public class GeneratePathServlet extends HttpServlet {
         resp.setCharacterEncoding("UTF-8");
 
         try {
-            HttpResponse<java.io.InputStream> response = httpClient.send(request, HttpResponse.BodyHandlers.ofInputStream());
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             
             if (response.statusCode() != 200) {
                 resp.setStatus(response.statusCode());
                 resp.setContentType("application/json");
-                try (java.io.InputStream is = response.body()) {
-                    String err = new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
-                    resp.getWriter().write("{\"error\": \"Gemini API returned error: " + escapeJson(err) + "\"}");
-                }
+                resp.getWriter().write("{\"error\": \"Gemini API returned error: " + escapeJson(response.body()) + "\"}");
                 return;
             }
 
-            // ponytail: custom stream parser to extract text chunks from Gemini stream on the fly and flush immediately
-            try (java.io.InputStream is = response.body();
-                 java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
-                
-                StringBuilder buffer = new StringBuilder();
-                char[] charBuffer = new char[1024];
-                int numRead;
-                while ((numRead = reader.read(charBuffer)) != -1) {
-                    buffer.append(charBuffer, 0, numRead);
-                    
-                    while (true) {
-                        int textIdx = buffer.indexOf("\"text\"");
-                        if (textIdx == -1) break;
-                        
-                        int quoteStart = buffer.indexOf("\"", textIdx + 6);
-                        if (quoteStart == -1) break;
-                        
-                        int start = quoteStart + 1;
-                        int end = start;
-                        boolean foundEnd = false;
-                        
-                        while (end < buffer.length()) {
-                            if (buffer.charAt(end) == '"') {
-                                int backslashes = 0;
-                                for (int i = end - 1; i >= start; i--) {
-                                    if (buffer.charAt(i) == '\\') backslashes++;
-                                    else break;
-                                }
-                                if (backslashes % 2 == 0) {
-                                    foundEnd = true;
-                                    break;
-                                }
-                            }
-                            end++;
-                        }
-                        
-                        if (!foundEnd) {
-                            break; // wait for more data
-                        }
-                        
-                        String escapedText = buffer.substring(start, end);
-                        String text = unescapeJson(escapedText);
-                        
-                        // Write chunk immediately to browser
-                        resp.getWriter().write(text);
-                        resp.getWriter().flush();
-                        
-                        // Remove processed portion from buffer
-                        buffer.delete(0, end + 1);
-                    }
-                }
+            String responseBody = response.body();
+            String curriculumJson = cleanJson(extractGeminiText(responseBody));
+
+            if (curriculumJson == null) {
+                resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+                resp.setContentType("application/json");
+                resp.getWriter().write("{\"error\": \"Failed to parse response from Gemini API\"}");
+                return;
             }
+
+            // Write the full JSON payload back to the browser
+            resp.getWriter().write(curriculumJson);
+            resp.getWriter().flush();
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -283,5 +242,79 @@ public class GeneratePathServlet extends HttpServlet {
                 .replace("\n", "\\n")
                 .replace("\r", "\\r")
                 .replace("\t", "\\t");
+    }
+
+    private static String cleanJson(String input) {
+        if (input == null) return null;
+        String trimmed = input.trim();
+        if (trimmed.startsWith("```")) {
+            int firstNewline = trimmed.indexOf('\n');
+            if (firstNewline != -1) {
+                trimmed = trimmed.substring(firstNewline + 1);
+            } else {
+                trimmed = trimmed.substring(3);
+            }
+            if (trimmed.endsWith("```")) {
+                trimmed = trimmed.substring(0, trimmed.length() - 3);
+            }
+            trimmed = trimmed.trim();
+        }
+        return trimmed;
+    }
+
+    private static class StreamUnescaper {
+        private final StringBuilder pending = new StringBuilder();
+
+        public String feed(String input) {
+            StringBuilder result = new StringBuilder();
+            int i = 0;
+            String text = input;
+            if (pending.length() > 0) {
+                text = pending.toString() + input;
+                pending.setLength(0);
+            }
+
+            while (i < text.length()) {
+                char c = text.charAt(i);
+                if (c == '\\') {
+                    if (i + 1 >= text.length()) {
+                        pending.append(c);
+                        break;
+                    }
+                    char next = text.charAt(i + 1);
+                    if (next == 'u') {
+                        if (i + 5 >= text.length()) {
+                            pending.append(text.substring(i));
+                            break;
+                        }
+                        String hex = text.substring(i + 2, i + 6);
+                        try {
+                            int code = Integer.parseInt(hex, 16);
+                            result.append((char) code);
+                        } catch (NumberFormatException e) {
+                            result.append("\\u").append(hex);
+                        }
+                        i += 6;
+                    } else {
+                        if (next == '"') result.append('"');
+                        else if (next == '\\') result.append('\\');
+                        else if (next == '/') result.append('/');
+                        else if (next == 'b') result.append('\b');
+                        else if (next == 'f') result.append('\f');
+                        else if (next == 'n') result.append('\n');
+                        else if (next == 'r') result.append('\r');
+                        else if (next == 't') result.append('\t');
+                        else {
+                            result.append('\\').append(next);
+                        }
+                        i += 2;
+                    }
+                } else {
+                    result.append(c);
+                    i++;
+                }
+            }
+            return result.toString();
+        }
     }
 }
