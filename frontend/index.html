@@ -978,19 +978,22 @@
                     });
 
                     // ── Click: shake if locked, open lesson otherwise ──
-                    nodeEl.addEventListener('click', () => {
-                        if (status === 'locked') {
-                            // Mechanical shake feedback
-                            nodeEl.classList.remove('shaking');
-                            void nodeEl.offsetWidth; // reflow to restart animation
-                            nodeEl.classList.add('shaking');
-                            nodeEl.addEventListener('animationend', () => {
-                                nodeEl.classList.remove('shaking');
-                            }, { once: true });
+                    nodeEl.onclick = function(e) {
+                        // STRICT OVERRIDE: Only block if it is explicitly locked and NOT in progress
+                        if (nodeEl.classList.contains('node-locked') && !nodeEl.classList.contains('node-in_progress')) {
+                            // Mechanical shake rejection feedback
+                            nodeEl.style.transform = 'translateX(4px)';
+                            setTimeout(() => nodeEl.style.transform = 'translateX(0)', 50);
                             return;
                         }
+
+                        // If it's completed or in-progress, let the user straight in!
+                        document.querySelectorAll('.node-card').forEach(n => n.classList.remove('is-active'));
+                        nodeEl.classList.add('is-active');
+
+                        // Instantly snap open the panel and fetch the lesson content
                         openLessonPanel(node, currentSearchTopic);
-                    });
+                    };
 
                     rowEl.appendChild(nodeEl);
                 });
