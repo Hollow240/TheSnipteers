@@ -153,9 +153,7 @@ public class GeneratePathServlet extends HttpServlet {
                 .build();
 
         resp.setStatus(HttpServletResponse.SC_OK);
-        resp.setHeader("Content-Type", "text/event-stream");
-        resp.setHeader("Cache-Control", "no-cache");
-        resp.setHeader("Connection", "keep-alive");
+        resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
 
         try {
