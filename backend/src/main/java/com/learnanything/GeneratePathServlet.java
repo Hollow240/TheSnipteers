@@ -113,7 +113,7 @@ public class GeneratePathServlet extends HttpServlet {
 
         String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + apiKey;
 
-        // ponytail: demand a deep DAG with explicit tier counts so the skill tree renders with real depth
+        // ponytail: demand a deep DAG with explicit tier counts and resources so the skill tree renders with real depth and references
         String prompt = "You are a world-class curriculum designer. Generate a comprehensive, detailed learning path DAG (Directed Acyclic Graph) for mastering: " + escapeJson(topic) + ".\n\n" +
                 "STRICT REQUIREMENTS:\n" +
                 "1. Generate EXACTLY 12-15 distinct nodes.\n" +
@@ -121,11 +121,15 @@ public class GeneratePathServlet extends HttpServlet {
                 "   - Tier 1 BEGINNER (4-5 nodes): Foundational concepts, zero prior knowledge required.\n" +
                 "   - Tier 2 INTERMEDIATE (4-5 nodes): Core techniques, requires Tier 1 completion.\n" +
                 "   - Tier 3 ADVANCED (4-5 nodes): Expert-level mastery, requires Tier 2 completion.\n" +
-                "3. Each node must have a short, specific name (2-4 words max) and a one-sentence description.\n" +
+                "3. Each node must contain:\n" +
+                "   - 'id': unique string id\n" +
+                "   - 'name': short specific name (2-4 words)\n" +
+                "   - 'description': one-sentence description\n" +
+                "   - 'resources': array of 2-3 valid educational markdown links related to the node topic (e.g., ['[MDN Docs](https://developer.mozilla.org)', '[GitHub Source](https://github.com/Hollow240/TheSnipteers)'])\n" +
                 "4. Links must reflect real conceptual prerequisites — not just sequential numbering.\n" +
                 "5. Every node must be reachable from at least one root node.\n\n" +
                 "Return ONLY a valid JSON object, no markdown fences, no commentary:\n" +
-                "{ \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\" }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";
+                "{ \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"resources\": [\"string\"] }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";
 
         String jsonPayload = "{"
                 + "\"contents\":[{"

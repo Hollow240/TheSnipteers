@@ -595,8 +595,24 @@
                     if (Math.sqrt(dx * dx + dy * dy) < 18) found = n.id;
                 });
                 hoveredNodeId = found;
+                canvas.style.cursor = (found !== null) ? 'pointer' : 'default'; // ponytail: show pointer cursor when hovering background nodes
             })
-            .on('mouseleave', () => { hoveredNodeId = null; });
+            .on('mouseleave', () => { 
+                hoveredNodeId = null; 
+                canvas.style.cursor = 'default';
+            })
+            .on('click', () => {
+                // ponytail: click a drifting background node to directly fast-travel to that topic
+                if (hoveredNodeId !== null) {
+                    const clickedNode = nodes.find(n => n.id === hoveredNodeId);
+                    if (clickedNode) {
+                        document.querySelector('.container').style.display = "none";
+                        const selectedTopic = clickedNode.name || clickedNode.id;
+                        document.getElementById('search-query').value = selectedTopic;
+                        generateNewCurriculum(selectedTopic);
+                    }
+                }
+            });
 
         simulation.on('tick', () => {
             ctx.clearRect(0, 0, width, height);
@@ -640,6 +656,7 @@
         // ─── State ─────────────────────────────────────────────────────────────────
         let currentSearchTopic = '';
         let activeNodeEl = null;
+        let graphData = null; // ponytail: store curriculum data globally to manage status transitions
         const API_BASE = window.location.protocol.startsWith('file') ? 'http://localhost:8082' : '';
 
         // ─── Tutor Panel Logic ──────────────────────────────────────────────────────
@@ -765,25 +782,25 @@
                 .then(markdown => {
                     panelBody.innerHTML = marked.parse(markdown);
 
+                    // Dynamic Resource & GitHub Link Injection
+                    const resourcesHtml = `
+                        <div style="margin-top: 30px; border-top: 1px solid #222; padding-top: 15px;">
+                            <span style="color: #666; font-size: 11px; display: block; margin-bottom: 8px;">EXTERNAL RESOURCES:</span>
+                            <a href="https://github.com/Hollow240/TheSnipteers" target="_blank" style="color: #fff; text-decoration: none; font-size: 13px; font-family: monospace; display: block; margin-bottom: 6px;">[ PROJECT SOURCE GITHUB ↗ ]</a>
+                            ${node.resources ? node.resources.map(res => `<div style="font-family: monospace; font-size: 13px; margin-top: 4px; color: #888;">[ RESOURCE: ${marked.parseInline(res)} ]</div>`).join('') : ''}
+                        </div>
+                    `;
+                    panelBody.innerHTML += resourcesHtml;
+
                     if (activeNodeEl && activeNodeEl.classList.contains('node-in_progress')) {
                         completeBtn.style.display = 'block';
                         completeBtn.onclick = () => {
-                            activeNodeEl.className = 'node-card node-completed';
-                            const desc = activeNodeEl.querySelector('p');
-                            if (desc) desc.textContent = 'completed';
-
-                            const nextSibling = activeNodeEl.nextElementSibling;
-                            if (nextSibling && nextSibling.classList.contains('node-locked')) {
-                                nextSibling.className = 'node-card node-in_progress';
-                                const nextDesc = nextSibling.querySelector('p');
-                                if (nextDesc) nextDesc.textContent = 'in progress';
-                                nextSibling.style.opacity = '';
-                                nextSibling.style.cursor = '';
-                            }
-
+                            markModuleComplete(node.id);
                             tutorPanel.classList.remove('open');
-                            activeNodeEl.classList.remove('is-active');
-                            activeNodeEl = null;
+                            if (activeNodeEl) {
+                                activeNodeEl.classList.remove('is-active');
+                                activeNodeEl = null;
+                            }
                         };
                     }
                 })
@@ -796,8 +813,68 @@
                 });
         };
 
+        // Force immediate unlocking when a module is marked complete
+        const markModuleComplete = (nodeId) => {
+            if (!graphData) return;
+
+            // 1. Find the target node in your data structure and update status
+            const targetNode = graphData.nodes.find(n => n.id === nodeId);
+            if (targetNode) {
+                targetNode.status = "COMPLETED";
+            }
+
+            // 2. Unlock the immediate next dependent nodes in the chain
+            graphData.links.forEach(link => {
+                const src = typeof link.source === 'object' ? link.source.id : link.source;
+                const tgt = typeof link.target === 'object' ? link.target.id : link.target;
+                if (src === nodeId) {
+                    const nextNode = graphData.nodes.find(n => n.id === tgt);
+                    if (nextNode && nextNode.status === "LOCKED") {
+                        nextNode.status = "IN_PROGRESS";
+                    }
+                }
+            });
+
+            // 3. FORCE DOM RE-RENDER: Instantly toggle the visual classes
+            document.querySelectorAll('.node-card').forEach(card => {
+                const cId = card.dataset.id;
+                const currentData = graphData.nodes.find(n => n.id === cId);
+                
+                if (currentData) {
+                    // Remove old states cleanly
+                    card.classList.remove('node-locked', 'node-in_progress', 'node-completed');
+                    
+                    const statusClass = `node-${currentData.status.toLowerCase()}`;
+                    card.classList.add(statusClass);
+                    
+                    const desc = card.querySelector('p');
+                    if (desc) {
+                        desc.textContent = currentData.status.toLowerCase().replace('_', ' ');
+                    }
+
+                    // Reset custom style overrides if unlocked
+                    if (currentData.status !== "LOCKED") {
+                        card.style.opacity = '';
+                        card.style.cursor = '';
+                    }
+                }
+            });
+
+            // 4. Update SVG connector colors
+            graphData.links.forEach(l => {
+                const src = typeof l.source === 'object' ? l.source.id : l.source;
+                const tgt = typeof l.target === 'object' ? l.target.id : l.target;
+                const path = document.getElementById(`link-${src}-${tgt}`);
+                const parentEl = document.getElementById(`node-${src}`);
+                if (path && parentEl) {
+                    path.setAttribute('stroke', statusColor(parentEl));
+                }
+            });
+        };
+
         // ─── Render Graph ────────────────────────────────────────────────────────────
         const renderGraph = (json) => {
+            graphData = json; // ponytail: store the graph globally
             const treeContainer = document.getElementById('tree-container');
             treeContainer.innerHTML = '';
             treeContainer.style.display = 'flex';
@@ -834,18 +911,24 @@
 
             // Calculate levels and group rows
             const levels = calculateNodeLevels(json.nodes, json.links);
+
+            // Initialize status of each node if not set
+            json.nodes.forEach(n => {
+                if (!n.status) {
+                    if (levels[n.id] === 0) {
+                        n.status = "IN_PROGRESS";
+                    } else {
+                        n.status = "LOCKED";
+                    }
+                }
+            });
+
             const rows = [];
             json.nodes.forEach(n => {
                 const lvl = levels[n.id];
                 if (!rows[lvl]) rows[lvl] = [];
                 rows[lvl].push(n);
             });
-
-            const getStatus = (index) => {
-                if (index === 0) return 'in_progress';
-                if (index < 3) return 'completed';
-                return 'locked';
-            };
 
             // Render rows and cards
             rows.forEach((rowNodes, lvlIdx) => {
@@ -854,10 +937,11 @@
                 rowEl.className = 'tree-row';
 
                 rowNodes.forEach((node, nodeIdx) => {
-                    const status = getStatus(nodeIdx + lvlIdx * 2);
+                    const status = node.status.toLowerCase();
                     const nodeEl = document.createElement('div');
                     nodeEl.className = `node-card node-${status}`;
                     nodeEl.id = `node-${node.id}`;
+                    nodeEl.dataset.id = node.id; // Store ID for status updates
 
                     const titleEl = document.createElement('h3');
                     titleEl.textContent = node.name;
@@ -950,12 +1034,9 @@
             }, 50);
         };
 
-        // ─── Search Form Submit ──────────────────────────────────────────────────────
-        document.getElementById('search-form').addEventListener('submit', (e) => {
-            e.preventDefault();
+        const generateNewCurriculum = (query) => {
             const queryInput = document.getElementById('search-query');
             const submitButton = document.querySelector('.search-button');
-            const query = queryInput.value.trim();
 
             const originalPlaceholder = queryInput.placeholder;
             queryInput.disabled = true;
@@ -1042,6 +1123,13 @@
                     queryInput.placeholder = originalPlaceholder;
                     queryInput.value = query;
                 });
+        };
+
+        // Search Bar Event Listener
+        document.getElementById('search-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const queryInput = document.getElementById('search-query');
+            generateNewCurriculum(queryInput.value.trim());
         });
     </script>
 </body>
