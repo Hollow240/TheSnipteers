@@ -543,19 +543,79 @@
         }
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(140))
-            .force('charge', d3.forceManyBody().strength(-40))
+            .force('link', d3.forceLink(links).id(d => d.id).distance(160))
+            .force('charge', d3.forceManyBody().strength(-300)) // ponytail: aggressive repulsion so nodes spread across the full canvas
             .force('center', d3.forceCenter(width / 2, height / 2))
-            .velocityDecay(0.15);
+            .velocityDecay(0.25);
 
         simulation.alphaTarget(0.02).restart();
+
+        // ─── Drag Behaviour ─────────────────────────────────────────────────────────
+        // ponytail: keep dragging vanilla D3, no external motion engines
+        let hoveredNodeId = null;
+
+        const drag = d3.drag()
+            .subject((event) => {
+                // Find the node closest to the click point
+                const mx = event.x, my = event.y;
+                let closest = null, minDist = Infinity;
+                nodes.forEach(n => {
+                    const dx = n.x - mx, dy = n.y - my;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist < minDist && dist < 20) { minDist = dist; closest = n; }
+                });
+                return closest;
+            })
+            .on('start', (event) => {
+                if (!event.subject) return;
+                if (!event.active) simulation.alphaTarget(0.3).restart(); // heat up sim on grab
+                event.subject.fx = event.subject.x;
+                event.subject.fy = event.subject.y;
+            })
+            .on('drag', (event) => {
+                if (!event.subject) return;
+                event.subject.fx = event.x;
+                event.subject.fy = event.y;
+            })
+            .on('end', (event) => {
+                if (!event.subject) return;
+                if (!event.active) simulation.alphaTarget(0.02); // cool back to idle drift
+                event.subject.fx = null; // release: elastic bands snap it back into equilibrium
+                event.subject.fy = null;
+            });
+
+        // Apply drag to the canvas element — translate pointer events to node coords
+        d3.select(canvas)
+            .call(drag)
+            .on('mousemove', (event) => {
+                const [mx, my] = d3.pointer(event);
+                let found = null;
+                nodes.forEach(n => {
+                    const dx = n.x - mx, dy = n.y - my;
+                    if (Math.sqrt(dx * dx + dy * dy) < 18) found = n.id;
+                });
+                hoveredNodeId = found;
+            })
+            .on('mouseleave', () => { hoveredNodeId = null; });
 
         simulation.on('tick', () => {
             ctx.clearRect(0, 0, width, height);
 
-            ctx.strokeStyle = '#333333';
-            ctx.lineWidth = 1;
-            links.forEach(link => {
+            // ponytail: build a set of link IDs connected to the hovered node for O(1) lookup
+            const highlightLinks = new Set();
+            if (hoveredNodeId !== null) {
+                links.forEach((link, i) => {
+                    const s = typeof link.source === 'object' ? link.source.id : link.source;
+                    const t = typeof link.target === 'object' ? link.target.id : link.target;
+                    if (s === hoveredNodeId || t === hoveredNodeId) highlightLinks.add(i);
+                });
+            }
+
+            // Draw links — highlight connected ones instantly
+            links.forEach((link, i) => {
+                const isHighlighted = highlightLinks.has(i);
+                ctx.strokeStyle = isHighlighted ? '#ffffff' : '#333333';
+                ctx.lineWidth   = isHighlighted ? 2.5 : 1;
                 ctx.beginPath();
                 ctx.moveTo(link.source.x, link.source.y);
                 ctx.lineTo(link.target.x, link.target.y);
@@ -563,14 +623,15 @@
             });
 
             nodes.forEach(node => {
+                const isHovered = node.id === hoveredNodeId;
                 ctx.beginPath();
-                ctx.arc(node.x, node.y, 4, 0, 2 * Math.PI);
+                ctx.arc(node.x, node.y, isHovered ? 6 : 4, 0, 2 * Math.PI);
                 ctx.fillStyle = '#ffffff';
                 ctx.shadowBlur = 0;
                 ctx.fill();
 
-                ctx.fillStyle = '#888888';
-                ctx.font = '400 12px Inter, sans-serif';
+                ctx.fillStyle = isHovered ? '#ffffff' : '#888888';
+                ctx.font = isHovered ? '600 12px Inter, sans-serif' : '400 12px Inter, sans-serif';
                 ctx.textAlign = 'center';
                 ctx.fillText(node.name, node.x, node.y - 12);
             });
