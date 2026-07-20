@@ -350,61 +350,7 @@ public class GeneratePathServlet extends HttpServlet {
         return trimmed;
     }
 
-    private static class StreamUnescaper {
-        private final StringBuilder pending = new StringBuilder();
 
-        public String feed(String input) {
-            StringBuilder result = new StringBuilder();
-            int i = 0;
-            String text = input;
-            if (pending.length() > 0) {
-                text = pending.toString() + input;
-                pending.setLength(0);
-            }
-
-            while (i < text.length()) {
-                char c = text.charAt(i);
-                if (c == '\\') {
-                    if (i + 1 >= text.length()) {
-                        pending.append(c);
-                        break;
-                    }
-                    char next = text.charAt(i + 1);
-                    if (next == 'u') {
-                        if (i + 5 >= text.length()) {
-                            pending.append(text.substring(i));
-                            break;
-                        }
-                        String hex = text.substring(i + 2, i + 6);
-                        try {
-                            int code = Integer.parseInt(hex, 16);
-                            result.append((char) code);
-                        } catch (NumberFormatException e) {
-                            result.append("\\u").append(hex);
-                        }
-                        i += 6;
-                    } else {
-                        if (next == '"') result.append('"');
-                        else if (next == '\\') result.append('\\');
-                        else if (next == '/') result.append('/');
-                        else if (next == 'b') result.append('\b');
-                        else if (next == 'f') result.append('\f');
-                        else if (next == 'n') result.append('\n');
-                        else if (next == 'r') result.append('\r');
-                        else if (next == 't') result.append('\t');
-                        else {
-                            result.append('\\').append(next);
-                        }
-                        i += 2;
-                    }
-                } else {
-                    result.append(c);
-                    i++;
-                }
-            }
-            return result.toString();
-        }
-    }
     // generateLocalCurriculum: generates an instant, valid 8-node curriculum locally
     private String generateLocalCurriculum(String topic) {
         String escapedTopic = escapeJson(topic);
