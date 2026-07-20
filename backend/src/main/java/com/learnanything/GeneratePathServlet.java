@@ -11,9 +11,12 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.concurrent.ConcurrentHashMap;
 
 @WebServlet(name = "GeneratePathServlet", urlPatterns = {"/api/generate-path"})
 public class GeneratePathServlet extends HttpServlet {
+
+    private static final ConcurrentHashMap<String, String> curriculumCache = new ConcurrentHashMap<>();
 
     private static final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(30))
@@ -46,7 +49,8 @@ public class GeneratePathServlet extends HttpServlet {
             return;
         }
 
-        handleTopicRequest(topic, resp);
+        boolean firstSearch = "true".equalsIgnoreCase(req.getParameter("firstSearch"));
+        handleTopicRequest(topic, firstSearch, resp);
     }
 
     @Override
@@ -89,10 +93,22 @@ public class GeneratePathServlet extends HttpServlet {
             return;
         }
 
-        handleTopicRequest(topic, resp);
+        boolean firstSearch = body.contains("\"firstSearch\":true") || body.contains("\"firstSearch\": true");
+        handleTopicRequest(topic, firstSearch, resp);
     }
 
-    private void handleTopicRequest(String topic, HttpServletResponse resp) throws IOException {
+    private void handleTopicRequest(String topic, boolean firstSearch, HttpServletResponse resp) throws IOException {
+        String normalizedTopic = topic.trim().toLowerCase();
+
+        if (firstSearch) {
+            System.out.println("⚡ Instant First Search routing for topic: " + topic);
+            String curriculumJson = generateLocalCurriculum(topic);
+            curriculumCache.put(normalizedTopic, curriculumJson);
+            resp.getWriter().write(curriculumJson);
+            resp.getWriter().flush();
+            return;
+        }
+
         String apiKey = System.getenv("GEMINI_API_KEY");
         if (apiKey == null || apiKey.trim().isEmpty()) {
             apiKey = System.getenv("GOOGLE_API_KEY");
@@ -113,13 +129,13 @@ public class GeneratePathServlet extends HttpServlet {
 
         String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + apiKey;
 
-        // ponytail: demand a deep DAG with explicit tier counts, status initializers, and resources
+        // ponytail: demand a packed, high-density academic network with 35-50 nodes and a special system Bored node
         String prompt = "You are an expert academic curriculum architect. The user wants to learn about: '" + escapeJson(topic) + "'.\n\n"
-                  + "Generate a deeply structured, comprehensive Directed Acyclic Graph (DAG) for this subject in strict JSON format.\n"
+                  + "Generate a massive, deeply structured, and extremely dense Directed Acyclic Graph (DAG) for this subject in strict JSON format.\n"
                   + "CRITICAL CONSTRAINTS:\n"
-                  + "1. Scale the graph to include at least 12 to 15 highly distinct nodes.\n"
+                  + "1. FULL-WINDOW DENSITY: Scale the graph to include between 20 to 25 highly specific sub-topics, historical methodologies, related frameworks, and adjacent academic fields.\n"
                   + "2. Group the nodes logically into 3 progressive learning tiers: 'Beginner' (Tier 1), 'Intermediate' (Tier 2), and 'Advanced' (Tier 3).\n"
-                  + "3. Create explicit dependency links between prerequisites (e.g., Tier 1 nodes must connect to Tier 2 nodes).\n"
+                  + "3. Create explicit dependency links between parent and child nodes.\n"
                   + "4. For EACH individual node, include exactly these fields:\n"
                   + "   - 'id': unique string slug (e.g., 'intro-to-variables')\n"
                   + "   - 'name': crisp, clean display title (e.g., 'Variables & Control Flow')\n"
@@ -127,11 +143,15 @@ public class GeneratePathServlet extends HttpServlet {
                   + "   - 'tier': 1, 2, or 3\n"
                   + "   - 'status': Set the first 2-3 Tier 1 nodes to 'IN_PROGRESS' or 'COMPLETED', and all subsequent dependent nodes strictly to 'LOCKED'.\n"
                   + "   - 'resources': A single string containing 2 high-quality educational markdown links separated by a semicolon and space (e.g., '[MDN Docs](https://developer.mozilla.org); [GitHub Source](https://github.com/Hollow240/TheSnipteers)').\n"
-                  + "5. NEVER use raw double quotes (\") inside any text values (like name or description). If you need quotes, use single quotes (').\n"
-                  + "6. Strictly avoid trailing commas at the end of objects or arrays (e.g., [a, b,] is invalid).\n\n"
+                  + "   - 'isSpecial': false\n"
+                  + "5. THE SPECIAL 'BORED' NODE: You MUST include exactly one special system node explicitly configured to hook into the client's randomized distraction routine. You must hardcode this node inside the 'nodes' array exactly as follows:\n"
+                  + "   { \"id\": \"Bored\", \"name\": \"⚠️ BORED?\", \"description\": \"Take a brief cognitive break with a curated educational distraction.\", \"tier\": 1, \"status\": \"IN_PROGRESS\", \"resources\": \"[Curated Distraction](https://github.com/Hollow240/TheSnipteers); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\", \"isSpecial\": true }\n"
+                  + "   You MUST also create exactly 3 to 4 link objects connecting this 'Bored' node to highly disparate, unexpected branches (different node IDs) of the generated curriculum.\n"
+                  + "6. NEVER use raw double quotes (\") inside any text values (like name or description). If you need quotes, use single quotes (').\n"
+                  + "7. Strictly avoid trailing commas at the end of objects or arrays (e.g., [a, b,] is invalid).\n\n"
                   + "Ensure your output contains ONLY the raw JSON string. Do not wrap it in markdown code blocks like ```json ... ``` as it will break the Java parsing buffer.\n\n"
                   + "JSON Schema:\n"
-                  + "{ \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"tier\": 1, \"status\": \"string\", \"resources\": \"string\" }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";
+                  + "{ \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\", \"tier\": 1, \"status\": \"string\", \"resources\": \"string\", \"isSpecial\": boolean }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";
 
         String jsonPayload = "{"
                 + "\"contents\":[{"
@@ -156,8 +176,48 @@ public class GeneratePathServlet extends HttpServlet {
         resp.setContentType("application/json");
         resp.setCharacterEncoding("UTF-8");
 
+        if (curriculumCache.containsKey(normalizedTopic)) {
+            System.out.println("🚀 Cache Hit for topic: " + normalizedTopic);
+            resp.getWriter().write(curriculumCache.get(normalizedTopic));
+            resp.getWriter().flush();
+            return;
+        }
+
         try {
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = null;
+            int maxRetries = 4;
+            long waitTimeMs = 2000; // Start with a 2-second pause
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+                    
+                    // Detect if rate limit was hit
+                    if (response.statusCode() == 429 || (response.body() != null && response.body().contains("RESOURCE_EXHAUSTED"))) {
+                        throw new IOException("Gemini API Rate Limit (429 / RESOURCE_EXHAUSTED)");
+                    }
+                    
+                    // Success or non-429 error code: stop retrying
+                    break;
+                } catch (IOException | InterruptedException e) {
+                    String errorMsg = e.getMessage();
+                    boolean isRateLimit = (errorMsg != null && (errorMsg.contains("429") || errorMsg.contains("RESOURCE_EXHAUSTED") || errorMsg.contains("Rate Limit")));
+                    
+                    if (isRateLimit && attempt < maxRetries) {
+                        System.out.println("⚠️ Gemini Rate Limit hit (429). Attempt " + attempt + " of " + maxRetries);
+                        try {
+                            System.out.println("⏳ Waiting " + (waitTimeMs / 1000) + " seconds before retry...");
+                            Thread.sleep(waitTimeMs);
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new IOException("Retry wait interrupted", ie);
+                        }
+                        waitTimeMs *= 2; // Exponential backoff: 2s -> 4s -> 8s
+                    } else {
+                        throw e; // Non-rate-limit error or max retries reached: propagate it
+                    }
+                }
+            }
             
             if (response.statusCode() != 200) {
                 resp.setStatus(response.statusCode());
@@ -175,6 +235,9 @@ public class GeneratePathServlet extends HttpServlet {
                 resp.getWriter().write("{\"error\": \"Failed to parse response from Gemini API\"}");
                 return;
             }
+
+            // Cache the successful result
+            curriculumCache.put(normalizedTopic, curriculumJson);
 
             // Write the full JSON payload back to the browser
             resp.getWriter().write(curriculumJson);
@@ -342,4 +405,96 @@ public class GeneratePathServlet extends HttpServlet {
             return result.toString();
         }
     }
+    // generateLocalCurriculum: generates an instant, valid 8-node curriculum locally
+    private String generateLocalCurriculum(String topic) {
+        String escapedTopic = escapeJson(topic);
+        return "{\n" +
+                "  \"nodes\": [\n" +
+                "    {\n" +
+                "      \"id\": \"intro\",\n" +
+                "      \"name\": \"Introduction to " + escapedTopic + "\",\n" +
+                "      \"description\": \"Learn the foundational concepts and basic principles of " + escapedTopic + ".\",\n" +
+                "      \"tier\": 1,\n" +
+                "      \"status\": \"IN_PROGRESS\",\n" +
+                "      \"resources\": \"[Wikipedia](https://en.wikipedia.org/wiki/" + escapedTopic.replace(" ", "_") + "); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\",\n" +
+                "      \"isSpecial\": false\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"id\": \"history\",\n" +
+                "      \"name\": \"History & Origins\",\n" +
+                "      \"description\": \"Explore the historical context and pioneers who shaped " + escapedTopic + ".\",\n" +
+                "      \"tier\": 1,\n" +
+                "      \"status\": \"LOCKED\",\n" +
+                "      \"resources\": \"[Britannica](https://www.britannica.com); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\",\n" +
+                "      \"isSpecial\": false\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"id\": \"core-principles\",\n" +
+                "      \"name\": \"Core Principles\",\n" +
+                "      \"description\": \"Understand the fundamental rules, theories, and laws of " + escapedTopic + ".\",\n" +
+                "      \"tier\": 1,\n" +
+                "      \"status\": \"LOCKED\",\n" +
+                "      \"resources\": \"[Feynman Lectures](https://www.feynmanlectures.caltech.edu); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\",\n" +
+                "      \"isSpecial\": false\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"id\": \"methodology\",\n" +
+                "      \"name\": \"Advanced Methodology\",\n" +
+                "      \"description\": \"Deep dive into the tools, processes, and techniques used in " + escapedTopic + ".\",\n" +
+                "      \"tier\": 2,\n" +
+                "      \"status\": \"LOCKED\",\n" +
+                "      \"resources\": \"[MIT Courseware](https://ocw.mit.edu); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\",\n" +
+                "      \"isSpecial\": false\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"id\": \"applications\",\n" +
+                "      \"name\": \"Practical Applications\",\n" +
+                "      \"description\": \"See how " + escapedTopic + " is applied to solve real-world problems.\",\n" +
+                "      \"tier\": 2,\n" +
+                "      \"status\": \"LOCKED\",\n" +
+                "      \"resources\": \"[Coursera](https://www.coursera.org); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\",\n" +
+                "      \"isSpecial\": false\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"id\": \"challenges\",\n" +
+                "      \"name\": \"Modern Challenges\",\n" +
+                "      \"description\": \"Analyze the current limitations, controversies, and open questions in " + escapedTopic + ".\",\n" +
+                "      \"tier\": 3,\n" +
+                "      \"status\": \"LOCKED\",\n" +
+                "      \"resources\": \"[Google Scholar](https://scholar.google.com); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\",\n" +
+                "      \"isSpecial\": false\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"id\": \"future\",\n" +
+                "      \"name\": \"Future Horizons\",\n" +
+                "      \"description\": \"Examine emerging trends and the future landscape of " + escapedTopic + ".\",\n" +
+                "      \"tier\": 3,\n" +
+                "      \"status\": \"LOCKED\",\n" +
+                "      \"resources\": \"[TechRadar](https://www.techradar.com); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\",\n" +
+                "      \"isSpecial\": false\n" +
+                "    },\n" +
+                "    {\n" +
+                "      \"id\": \"Bored\",\n" +
+                "      \"name\": \"⚠️ BORED?\",\n" +
+                "      \"description\": \"Take a brief cognitive break with a curated educational distraction.\",\n" +
+                "      \"tier\": 1,\n" +
+                "      \"status\": \"IN_PROGRESS\",\n" +
+                "      \"resources\": \"[Curated Distraction](https://github.com/Hollow240/TheSnipteers); [Project Wiki](https://github.com/Hollow240/TheSnipteers/wiki)\",\n" +
+                "      \"isSpecial\": true\n" +
+                "    }\n" +
+                "  ],\n" +
+                "  \"links\": [\n" +
+                "    { \"source\": \"intro\", \"target\": \"core-principles\" },\n" +
+                "    { \"source\": \"core-principles\", \"target\": \"methodology\" },\n" +
+                "    { \"source\": \"history\", \"target\": \"core-principles\" },\n" +
+                "    { \"source\": \"methodology\", \"target\": \"applications\" },\n" +
+                "    { \"source\": \"applications\", \"target\": \"challenges\" },\n" +
+                "    { \"source\": \"challenges\", \"target\": \"future\" },\n" +
+                "    { \"source\": \"Bored\", \"target\": \"core-principles\" },\n" +
+                "    { \"source\": \"Bored\", \"target\": \"applications\" },\n" +
+                "    { \"source\": \"Bored\", \"target\": \"future\" }\n" +
+                "  ]\n" +
+                "}";
+    }
+
 }

@@ -1,11 +1,11 @@
 # Stage 1: Build the Maven dependencies and package the fat JAR
-FROM maven:3.9.6-eclipse-temurin-17-alpine AS build
+FROM docker.io/library/maven:3.9.6-eclipse-temurin-17-alpine AS build
 WORKDIR /app
 COPY . .
-RUN mvn clean package -pl backend -DskipTests
+RUN mvn clean package -f backend/pom.xml -DskipTests
 
 # Stage 2: Run environment using eclipse-temurin
-FROM eclipse-temurin:17-jre-alpine
+FROM docker.io/library/eclipse-temurin:17-jre-alpine
 WORKDIR /app
 # Copy the compiled fat JAR from build stage
 COPY --from=build /app/backend/target/*-jar-with-dependencies.jar app.jar

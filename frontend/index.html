@@ -4,7 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Learn Anything - Constellation Home</title>
+    <title>LearnAnything — AI-Powered Learning Paths</title>
+    <meta name="description" content="Generate an AI-powered, interactive learning path for any topic. Built with Gemini AI.">
+    <meta property="og:title" content="LearnAnything — AI-Powered Learning Paths">
+    <meta property="og:description" content="Type any topic and get a personalized curriculum with lessons, delivered by Gemini AI.">
+    <meta property="og:type" content="website">
+    <meta name="theme-color" content="#000000">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>&#x1F9E0;</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
@@ -489,6 +495,110 @@
             background: #000000;
             color: #ffffff;
         }
+
+        /* ─── Generation Progress Bar ─── */
+        .gen-progress-bar {
+            width: 100%;
+            height: 2px;
+            background: #1a1a1a;
+            margin: 1rem 0 0.5rem;
+            overflow: hidden;
+        }
+        .gen-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #444, #fff);
+            transition: width 0.4s ease;
+        }
+
+        /* ─── Locked Node Tooltip ─── */
+        .locked-tooltip {
+            position: fixed;
+            background: #111111;
+            border: 1px solid #ffffff;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.78rem;
+            color: #cccccc;
+            z-index: 300;
+            max-width: 220px;
+            box-shadow: 4px 4px 0px #333333;
+            font-family: 'Inter', sans-serif;
+            line-height: 1.5;
+            pointer-events: none;
+            animation: tooltip-fade-in 0.1s ease;
+        }
+        @keyframes tooltip-fade-in {
+            from { opacity: 0; transform: translateY(4px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── Resume Banner ─── */
+        #resume-banner {
+            position: fixed;
+            bottom: 1.5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #111111;
+            border: 2px solid #333333;
+            padding: 0.75rem 1.25rem;
+            z-index: 200;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            box-shadow: 4px 4px 0 #333;
+            animation: tooltip-fade-in 0.2s ease;
+        }
+        /* ─── Suggestion Chips ─── */
+        .suggestion-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .chip {
+            padding: 0.35rem 0.85rem;
+            background: transparent;
+            border: 1px solid #333;
+            color: #666;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            cursor: pointer;
+            letter-spacing: 0.04em;
+            transition: all 0.1s;
+        }
+        .chip:hover { border-color: #ffffff; color: #ffffff; }
+
+        /* ─── Status Badge ─── */
+        .node-status-badge {
+            display: inline-block;
+            font-size: 0.6rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 0.15rem 0.4rem;
+            margin-top: 0.3rem;
+            border: 1px solid currentColor;
+            opacity: 0.7;
+        }
+
+        /* ─── Mobile Responsive ─── */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 1.5rem; }
+            h1 { font-size: 2.2rem; }
+            .search-form { flex-direction: column; gap: 0.5rem; }
+            .search-button { width: 100%; }
+            .node-card { width: 130px; padding: 0.9rem 0.6rem; }
+            .node-card h3 { font-size: 0.8rem; }
+            .tree-row { gap: 1rem; flex-wrap: wrap; }
+            #tutor-panel { width: 100%; min-width: unset; height: 70vh; top: auto; bottom: 0; border-left: none; border-top: 2px solid #333; transform: translateY(100%); }
+            #tutor-panel.open { transform: translateY(0); }
+            .back-btn { top: 0.75rem; left: 0.75rem; padding: 0.5rem 1rem; font-size: 0.8rem; }
+        }
     </style>
 </head>
 
@@ -503,6 +613,14 @@
                 autocomplete="off">
             <button type="submit" class="search-button">Explore</button>
         </form>
+        <div class="suggestion-chips">
+            <button class="chip" onclick="fillSearch('Quantum Computing')">Quantum Computing</button>
+            <button class="chip" onclick="fillSearch('Ancient Rome')">Ancient Rome</button>
+            <button class="chip" onclick="fillSearch('Music Theory')">Music Theory</button>
+            <button class="chip" onclick="fillSearch('Marine Biology')">Marine Biology</button>
+            <button class="chip" onclick="fillSearch('Stoicism')">Stoicism</button>
+            <button class="chip" onclick="fillSearch('Black Holes')">Black Holes</button>
+        </div>
     </div>
 
     <!-- Tutor Panel -->
@@ -511,8 +629,8 @@
         <div class="panel-content" id="panel-content">
             <h2 class="panel-title" id="panel-title">Select a node to begin</h2>
             <div class="panel-body" id="panel-body"></div>
+            <div id="panel-actions" style="margin-top: 2rem; display: flex; flex-direction: column; gap: 0.75rem; width: 100%;"></div>
         </div>
-        <button class="panel-complete-btn" id="panel-complete-btn" style="display: none;">Mark as Complete</button>
     </div>
 
     <!-- Tree Container -->
@@ -527,26 +645,297 @@
         let width = canvas.width = window.innerWidth;
         let height = canvas.height = window.innerHeight;
 
+        const targetX = (d) => {
+            return d.wing === 'left' ? width * 0.15 : width * 0.85;
+        };
+        const targetY = (d) => {
+            const leftNodes = nodes.filter(n => n.wing === 'left');
+            const rightNodes = nodes.filter(n => n.wing === 'right');
+            if (d.wing === 'left') {
+                const idx = leftNodes.indexOf(d);
+                return idx % 2 === 0 ? height * 0.18 : height * 0.82;
+            } else {
+                const idx = rightNodes.indexOf(d);
+                return idx % 2 === 0 ? height * 0.18 : height * 0.82;
+            }
+        };
+
         window.addEventListener('resize', () => {
             width = canvas.width = window.innerWidth;
             height = canvas.height = window.innerHeight;
-            simulation.force('center', d3.forceCenter(width / 2, height / 2));
+            simulation.force('x', d3.forceX(targetX).strength(0.05));
+            simulation.force('y', d3.forceY(targetY).strength(0.05));
             simulation.alpha(0.3).restart();
         });
 
-        const topics = ["Math", "Physics", "AI", "History", "Coding", "Music", "Art", "Biology", "Economics", "Philosophy", "Astronomy", "Design"];
-        const nodes = topics.map((name, id) => ({ id, name }));
-        const links = [];
+        const nodes = [
+            { id: "Computer Science", label: "Computer Science", wing: "left", isSpecial: false },
+            { id: "Coding", label: "Coding", wing: "left", isSpecial: false },
+            { id: "AI & Machine Learning", label: "AI & Machine Learning", wing: "left", isSpecial: false },
+            { id: "Web Architecture", label: "Web Architecture", wing: "left", isSpecial: false },
+            { id: "Databases", label: "Databases", wing: "left", isSpecial: false },
+            { id: "Design", label: "Design", wing: "left", isSpecial: false },
+            { id: "UI/UX Design", label: "UI/UX Design", wing: "left", isSpecial: false },
+            { id: "Typography", label: "Typography", wing: "left", isSpecial: false },
+            { id: "Color Theory", label: "Color Theory", wing: "left", isSpecial: false },
+            { id: "Mathematics", label: "Mathematics", wing: "left", isSpecial: false },
+            { id: "Physics", label: "Physics", wing: "left", isSpecial: false },
+            { id: "Astronomy", label: "Astronomy", wing: "left", isSpecial: false },
+            { id: "Unix/Linux Systems", label: "Unix/Linux Systems", wing: "left", isSpecial: false },
+            { id: "Hardware Architecture", label: "Hardware Architecture", wing: "left", isSpecial: false },
+            { id: "Compilers", label: "Compilers", wing: "left", isSpecial: false },
+            { id: "Renewable Energy Systems", label: "Renewable Energy", wing: "left", isSpecial: false },
+            { id: "Nix Ecosystem", label: "Nix Ecosystem", wing: "left", isSpecial: false },
+            { id: "Self-Hosting", label: "Self-Hosting", wing: "left", isSpecial: false },
+            { id: "Data Structures", label: "Data Structures", wing: "left", isSpecial: false },
+            { id: "Functional Programming", label: "Functional Prog.", wing: "left", isSpecial: false },
+            { id: "Type Theory", label: "Type Theory", wing: "left", isSpecial: false },
+            { id: "Assembly Language", label: "Assembly", wing: "left", isSpecial: false },
+            { id: "Neural Networks", label: "Neural Networks", wing: "left", isSpecial: false },
+            { id: "Computer Vision", label: "Computer Vision", wing: "left", isSpecial: false },
+            { id: "Natural Language Processing", label: "NLP", wing: "left", isSpecial: false },
+            { id: "WebSockets", label: "WebSockets", wing: "left", isSpecial: false },
+            { id: "GraphQL APIs", label: "GraphQL APIs", wing: "left", isSpecial: false },
+            { id: "Distributed Databases", label: "Distributed DBs", wing: "left", isSpecial: false },
+            { id: "SQL Optimization", label: "SQL Tuning", wing: "left", isSpecial: false },
+            { id: "Compiler Optimization", label: "Compiler Opt.", wing: "left", isSpecial: false },
+            { id: "Kernel Development", label: "Kernel Dev", wing: "left", isSpecial: false },
+            { id: "Docker & Containers", label: "Containers", wing: "left", isSpecial: false },
+            { id: "RISC-V ISAs", label: "RISC-V Architecture", wing: "left", isSpecial: false },
+            { id: "Wireframing", label: "Wireframing", wing: "left", isSpecial: false },
+            { id: "Design Systems", label: "Design Systems", wing: "left", isSpecial: false },
+            { id: "Interaction Design", label: "Interaction Dev", wing: "left", isSpecial: false },
+            { id: "Layout Geometry", label: "Layout Geometry", wing: "left", isSpecial: false },
+            { id: "Linear Algebra", label: "Linear Algebra", wing: "left", isSpecial: false },
+            { id: "Calculus", label: "Calculus", wing: "left", isSpecial: false },
+            { id: "Quantum Mechanics", label: "Quantum Mechanics", wing: "left", isSpecial: false },
+            { id: "Astrophysics", label: "Astrophysics", wing: "left", isSpecial: false },
+            { id: "Orbital Mechanics", label: "Orbital Mechanics", wing: "left", isSpecial: false },
+            { id: "Rust Programming", label: "Rust Programming", wing: "left", isSpecial: false },
+            { id: "WebAssembly", label: "WebAssembly", wing: "left", isSpecial: false },
+            { id: "Cryptography", label: "Cryptography", wing: "left", isSpecial: false },
+            { id: "Quantum Computing", label: "Quantum Computing", wing: "left", isSpecial: false },
+            { id: "Computer Graphics", label: "Computer Graphics", wing: "left", isSpecial: false },
+            { id: "Ray Tracing", label: "Ray Tracing", wing: "left", isSpecial: false },
+            { id: "Game Engines", label: "Game Engines", wing: "left", isSpecial: false },
+            { id: "Bored", label: "\u26a0\ufe0f BORED?", wing: "left", isSpecial: true },
+            { id: "History", label: "History", wing: "right", isSpecial: false },
+            { id: "Philosophy", label: "Philosophy", wing: "right", isSpecial: false },
+            { id: "Economics", label: "Economics", wing: "right", isSpecial: false },
+            { id: "Psychology", label: "Psychology", wing: "right", isSpecial: false },
+            { id: "Biology", label: "Biology", wing: "right", isSpecial: false },
+            { id: "Chemistry", label: "Chemistry", wing: "right", isSpecial: false },
+            { id: "Literature", label: "Literature", wing: "right", isSpecial: false },
+            { id: "Anthropology", label: "Anthropology", wing: "right", isSpecial: false },
+            { id: "Sociology", label: "Sociology", wing: "right", isSpecial: false },
+            { id: "Linguistics", label: "Linguistics", wing: "right", isSpecial: false },
+            { id: "Epistemology", label: "Epistemology", wing: "right", isSpecial: false },
+            { id: "Ethics", label: "Ethics", wing: "right", isSpecial: false },
+            { id: "Metaphysics", label: "Metaphysics", wing: "right", isSpecial: false },
+            { id: "Ancient Rome", label: "Ancient Rome", wing: "right", isSpecial: false },
+            { id: "Macroeconomics", label: "Macroeconomics", wing: "right", isSpecial: false },
+            { id: "Microeconomics", label: "Microeconomics", wing: "right", isSpecial: false },
+            { id: "Behavioral Economics", label: "Behavioral Econ.", wing: "right", isSpecial: false },
+            { id: "Cognitive Psychology", label: "Cognitive Psych.", wing: "right", isSpecial: false },
+            { id: "Social Psychology", label: "Social Psych.", wing: "right", isSpecial: false },
+            { id: "Clinical Psychology", label: "Clinical Psych.", wing: "right", isSpecial: false },
+            { id: "Neuroscience", label: "Neuroscience", wing: "right", isSpecial: false },
+            { id: "Genetics", label: "Genetics", wing: "right", isSpecial: false },
+            { id: "Evolutionary Biology", label: "Evolutionary Bio", wing: "right", isSpecial: false },
+            { id: "Ecology", label: "Ecology", wing: "right", isSpecial: false },
+            { id: "Organic Chemistry", label: "Organic Chem.", wing: "right", isSpecial: false },
+            { id: "Inorganic Chemistry", label: "Inorganic Chem.", wing: "right", isSpecial: false },
+            { id: "Biochemistry", label: "Biochemistry", wing: "right", isSpecial: false },
+            { id: "Art History", label: "Art History", wing: "right", isSpecial: false },
+            { id: "Creative Writing", label: "Creative Writing", wing: "right", isSpecial: false },
+            { id: "World War II", label: "World War II", wing: "right", isSpecial: false },
+            { id: "Renaissance History", label: "Renaissance", wing: "right", isSpecial: false },
+            { id: "Political Science", label: "Political Science", wing: "right", isSpecial: false },
+            { id: "Game Theory", label: "Game Theory", wing: "right", isSpecial: false },
+            { id: "Syntax & Semantics", label: "Syntax & Semantics", wing: "right", isSpecial: false },
+            { id: "Phonetics", label: "Phonetics", wing: "right", isSpecial: false },
+            { id: "Archaeology", label: "Archaeology", wing: "right", isSpecial: false },
+            { id: "Mythology", label: "Mythology", wing: "right", isSpecial: false },
+            { id: "Music Theory", label: "Music Theory", wing: "right", isSpecial: false },
+            { id: "Harmony & Counterpoint", label: "Harmony", wing: "right", isSpecial: false },
+            { id: "Philosophy of Science", label: "Philosophy of Sci", wing: "right", isSpecial: false },
+            { id: "Logic", label: "Logic", wing: "right", isSpecial: false },
+            { id: "Existentialism", label: "Existentialism", wing: "right", isSpecial: false },
+            { id: "Cell Biology", label: "Cell Biology", wing: "right", isSpecial: false },
+            { id: "Immunology", label: "Immunology", wing: "right", isSpecial: false },
+            { id: "Paleontology", label: "Paleontology", wing: "right", isSpecial: false },
+            { id: "Astrochemistry", label: "Astrochemistry", wing: "right", isSpecial: false },
+            { id: "Thermodynamics", label: "Thermodynamics", wing: "right", isSpecial: false },
+            { id: "Macrohistory", label: "Macrohistory", wing: "right", isSpecial: false },
+            { id: "Cultural Studies", label: "Cultural Studies", wing: "right", isSpecial: false },
+            { id: "Environmental Economics", label: "Environmental Econ", wing: "right", isSpecial: false }
+        ];
 
-        for (let i = 1; i < nodes.length; i++) {
-            links.push({ source: Math.floor(Math.random() * i), target: i });
-        }
+        const links = [
+            { source: "Computer Science", target: "Coding" },
+            { source: "Computer Science", target: "AI & Machine Learning" },
+            { source: "Computer Science", target: "Databases" },
+            { source: "Coding", target: "Web Architecture" },
+            { source: "Design", target: "UI/UX Design" },
+            { source: "UI/UX Design", target: "Typography" },
+            { source: "Typography", target: "Color Theory" },
+            { source: "Mathematics", target: "Physics" },
+            { source: "Physics", target: "Astronomy" },
+            { source: "Unix/Linux Systems", target: "Hardware Architecture" },
+            { source: "Hardware Architecture", target: "Compilers" },
+            { source: "Computer Science", target: "Data Structures" },
+            { source: "Coding", target: "Functional Programming" },
+            { source: "Functional Programming", target: "Type Theory" },
+            { source: "Hardware Architecture", target: "Assembly Language" },
+            { source: "AI & Machine Learning", target: "Neural Networks" },
+            { source: "AI & Machine Learning", target: "Computer Vision" },
+            { source: "AI & Machine Learning", target: "Natural Language Processing" },
+            { source: "Web Architecture", target: "WebSockets" },
+            { source: "Web Architecture", target: "GraphQL APIs" },
+            { source: "Databases", target: "Distributed Databases" },
+            { source: "Databases", target: "SQL Optimization" },
+            { source: "Compilers", target: "Compiler Optimization" },
+            { source: "Compilers", target: "Type Theory" },
+            { source: "Unix/Linux Systems", target: "Kernel Development" },
+            { source: "Unix/Linux Systems", target: "Nix Ecosystem" },
+            { source: "Nix Ecosystem", target: "Self-Hosting" },
+            { source: "Self-Hosting", target: "Docker & Containers" },
+            { source: "Hardware Architecture", target: "RISC-V ISAs" },
+            { source: "Renewable Energy Systems", target: "Hardware Architecture" },
+            { source: "UI/UX Design", target: "Wireframing" },
+            { source: "UI/UX Design", target: "Design Systems" },
+            { source: "Design", target: "Interaction Design" },
+            { source: "Typography", target: "Layout Geometry" },
+            { source: "Mathematics", target: "Linear Algebra" },
+            { source: "Mathematics", target: "Calculus" },
+            { source: "Physics", target: "Quantum Mechanics" },
+            { source: "Astronomy", target: "Astrophysics" },
+            { source: "Astronomy", target: "Orbital Mechanics" },
+            { source: "Coding", target: "Rust Programming" },
+            { source: "Rust Programming", target: "WebAssembly" },
+            { source: "Web Architecture", target: "WebAssembly" },
+            { source: "Computer Science", target: "Cryptography" },
+            { source: "Mathematics", target: "Cryptography" },
+            { source: "Quantum Mechanics", target: "Quantum Computing" },
+            { source: "Computer Science", target: "Quantum Computing" },
+            { source: "Coding", target: "Computer Graphics" },
+            { source: "Computer Graphics", target: "Ray Tracing" },
+            { source: "Computer Graphics", target: "Game Engines" },
+            { source: "Game Engines", target: "Ray Tracing" },
+            { source: "History", target: "Philosophy" },
+            { source: "History", target: "Anthropology" },
+            { source: "History", target: "Sociology" },
+            { source: "Philosophy", target: "Literature" },
+            { source: "Philosophy", target: "Linguistics" },
+            { source: "Economics", target: "Sociology" },
+            { source: "Psychology", target: "Sociology" },
+            { source: "Biology", target: "Chemistry" },
+            { source: "Philosophy", target: "Epistemology" },
+            { source: "Philosophy", target: "Ethics" },
+            { source: "Philosophy", target: "Metaphysics" },
+            { source: "History", target: "Ancient Rome" },
+            { source: "Economics", target: "Macroeconomics" },
+            { source: "Economics", target: "Microeconomics" },
+            { source: "Economics", target: "Behavioral Economics" },
+            { source: "Psychology", target: "Behavioral Economics" },
+            { source: "Psychology", target: "Cognitive Psychology" },
+            { source: "Psychology", target: "Social Psychology" },
+            { source: "Psychology", target: "Clinical Psychology" },
+            { source: "Biology", target: "Neuroscience" },
+            { source: "Psychology", target: "Neuroscience" },
+            { source: "Biology", target: "Genetics" },
+            { source: "Biology", target: "Evolutionary Biology" },
+            { source: "Biology", target: "Ecology" },
+            { source: "Chemistry", target: "Organic Chemistry" },
+            { source: "Chemistry", target: "Inorganic Chemistry" },
+            { source: "Chemistry", target: "Biochemistry" },
+            { source: "Biology", target: "Biochemistry" },
+            { source: "Literature", target: "Art History" },
+            { source: "Literature", target: "Creative Writing" },
+            { source: "History", target: "World War II" },
+            { source: "History", target: "Renaissance History" },
+            { source: "Economics", target: "Political Science" },
+            { source: "Sociology", target: "Political Science" },
+            { source: "Economics", target: "Game Theory" },
+            { source: "Linguistics", target: "Syntax & Semantics" },
+            { source: "Linguistics", target: "Phonetics" },
+            { source: "Anthropology", target: "Archaeology" },
+            { source: "History", target: "Archaeology" },
+            { source: "Literature", target: "Mythology" },
+            { source: "Art History", target: "Music Theory" },
+            { source: "Music Theory", target: "Harmony & Counterpoint" },
+            { source: "Philosophy", target: "Philosophy of Science" },
+            { source: "Philosophy", target: "Logic" },
+            { source: "Philosophy", target: "Existentialism" },
+            { source: "Biology", target: "Cell Biology" },
+            { source: "Biology", target: "Immunology" },
+            { source: "Biology", target: "Paleontology" },
+            { source: "Chemistry", target: "Astrochemistry" },
+            { source: "Chemistry", target: "Thermodynamics" },
+            { source: "History", target: "Macrohistory" },
+            { source: "Literature", target: "Cultural Studies" },
+            { source: "Economics", target: "Environmental Economics" },
+            { source: "Mathematics", target: "Logic" },
+            { source: "Computer Science", target: "Linguistics" },
+            { source: "Astrophysics", target: "Astrochemistry" },
+            { source: "Physics", target: "Thermodynamics" },
+            { source: "Bored", target: "Existentialism" },
+            { source: "Bored", target: "Quantum Computing" }
+        ];
 
         const simulation = d3.forceSimulation(nodes)
-            .force('link', d3.forceLink(links).id(d => d.id).distance(160))
-            .force('charge', d3.forceManyBody().strength(-300)) // ponytail: aggressive repulsion so nodes spread across the full canvas
-            .force('center', d3.forceCenter(width / 2, height / 2))
-            .velocityDecay(0.25);
+            .force("link", d3.forceLink(links).id(d => d.id).distance(80))
+            .force("charge", d3.forceManyBody().strength(-120))
+            .force("x", d3.forceX(targetX).strength(0.05))
+            .force("y", d3.forceY(targetY).strength(0.05))
+            .force("collision", d3.forceCollide().radius(50))
+            .force("avoid-center", () => {
+                const cx = width / 2;
+                const cy = height / 2;
+                const rx = 380; 
+                const ry = 260; 
+                for (let node of nodes) {
+                    const dx = node.x - cx;
+                    const dy = node.y - cy;
+                    const adx = Math.abs(dx);
+                    const ady = Math.abs(dy);
+                    if (adx < rx && ady < ry) {
+                        const px = rx - adx;
+                        const py = ry - ady;
+                        
+                        // Push out smoothly
+                        const strength = 0.2;
+                        if (px < py) {
+                            node.vx += Math.sign(dx || 0.1) * px * strength;
+                            // Damp inward horizontal velocity
+                            if (dx > 0 && node.vx < 0) node.vx = 0;
+                            if (dx < 0 && node.vx > 0) node.vx = 0;
+                        } else {
+                            node.vy += Math.sign(dy || 0.1) * py * strength;
+                            // Damp inward vertical velocity
+                            if (dy > 0 && node.vy < 0) node.vy = 0;
+                            if (dy < 0 && node.vy > 0) node.vy = 0;
+                        }
+                        
+                        // Soft clamp fallback if node drifts deep inside
+                        if (adx < rx - 15 && ady < ry - 15) {
+                            if (px < py) {
+                                node.x = cx + Math.sign(dx || 0.1) * (rx - 15);
+                            } else {
+                                node.y = cy + Math.sign(dy || 0.1) * (ry - 15);
+                            }
+                        }
+                    }
+                }
+            })
+            .force("bounding-box", () => {
+                for (let node of nodes) {
+                    const padding = 30; // Keeps text from clipping edges
+                    node.x = Math.max(padding, Math.min(width - padding, node.x));
+                    node.y = Math.max(padding, Math.min(height - padding, node.y));
+                }
+            })
+            .velocityDecay(0.3);
 
         simulation.alphaTarget(0.02).restart();
 
@@ -606,10 +995,14 @@
                 if (hoveredNodeId !== null) {
                     const clickedNode = nodes.find(n => n.id === hoveredNodeId);
                     if (clickedNode) {
-                        document.querySelector('.container').style.display = "none";
-                        const selectedTopic = clickedNode.name || clickedNode.id;
-                        document.getElementById('search-query').value = selectedTopic;
-                        generateNewCurriculum(selectedTopic);
+                        if (clickedNode.id === "Bored") {
+                            triggerBoredFeature();
+                        } else {
+                            document.querySelector('.container').style.display = "none";
+                            const selectedTopic = clickedNode.label || clickedNode.name || clickedNode.id;
+                            document.getElementById('search-query').value = selectedTopic;
+                            generateNewCurriculum(selectedTopic);
+                        }
                     }
                 }
             });
@@ -641,15 +1034,21 @@
             nodes.forEach(node => {
                 const isHovered = node.id === hoveredNodeId;
                 ctx.beginPath();
-                ctx.arc(node.x, node.y, isHovered ? 6 : 4, 0, 2 * Math.PI);
-                ctx.fillStyle = '#ffffff';
+                let radius = isHovered ? 8 : 5;
+                if (node.isSpecial) {
+                    radius = isHovered ? 12 : 10;
+                }
+                // Larger invisible hit area for easier interaction
+                node._hitRadius = isHovered ? 20 : 18;
+                ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI);
+                ctx.fillStyle = node.isSpecial ? '#ff007f' : '#ffffff';
                 ctx.shadowBlur = 0;
                 ctx.fill();
 
-                ctx.fillStyle = isHovered ? '#ffffff' : '#888888';
+                ctx.fillStyle = node.isSpecial ? '#ff007f' : (isHovered ? '#ffffff' : '#888888');
                 ctx.font = isHovered ? '600 12px Inter, sans-serif' : '400 12px Inter, sans-serif';
                 ctx.textAlign = 'center';
-                ctx.fillText(node.name, node.x, node.y - 12);
+                ctx.fillText(node.label || node.name || node.id, node.x, node.y - 12);
             });
         });
 
@@ -663,7 +1062,7 @@
         const tutorPanel   = document.getElementById('tutor-panel');
         const panelTitle   = document.getElementById('panel-title');
         const panelBody    = document.getElementById('panel-body');
-        const completeBtn  = document.getElementById('panel-complete-btn');
+        const panelActions = document.getElementById('panel-actions');
         const panelCloseBtn = document.getElementById('panel-close-btn');
 
         panelCloseBtn.addEventListener('click', () => {
@@ -747,6 +1146,9 @@
 
         // ─── Open Lesson in Tutor Panel ─────────────────────────────────────────────
         const openLessonPanel = (node, topic) => {
+            // Reset panel scroll to top when switching nodes
+            document.getElementById('panel-content').scrollTop = 0;
+
             // Deactivate previous active card
             if (activeNodeEl) activeNodeEl.classList.remove('is-active');
 
@@ -761,7 +1163,7 @@
                 <p class="panel-terminal-line">> NODE: ${node.name.toUpperCase()}</p>
                 <p class="panel-terminal-line blink">> [ FETCHING LESSON_DATA... ]</p>
             `;
-            completeBtn.style.display = 'none';
+            panelActions.innerHTML = '';
 
             // Snap panel open immediately
             tutorPanel.classList.add('open');
@@ -791,18 +1193,7 @@
                         </div>
                     `;
                     panelBody.innerHTML += resourcesHtml;
-
-                    if (activeNodeEl && activeNodeEl.classList.contains('node-in_progress')) {
-                        completeBtn.style.display = 'block';
-                        completeBtn.onclick = () => {
-                            markModuleComplete(node.id);
-                            tutorPanel.classList.remove('open');
-                            if (activeNodeEl) {
-                                activeNodeEl.classList.remove('is-active');
-                                activeNodeEl = null;
-                            }
-                        };
-                    }
+                    renderPanelActions(node, topic);
                 })
                 .catch(error => {
                     console.error('Error fetching lesson:', error);
@@ -811,6 +1202,69 @@
                         <p class="panel-terminal-line" style="color:#ef4444;">> ${error.message}</p>
                     `;
                 });
+        };
+
+        // renderPanelActions: renders the complete/completed/next-chapter button logic inside the tutor panel
+        const renderPanelActions = (node, topic) => {
+            if (!panelActions) return;
+            panelActions.innerHTML = '';
+
+            const status = node.status; // 'COMPLETED', 'IN_PROGRESS', 'LOCKED'
+
+            if (status === 'IN_PROGRESS') {
+                const btn = document.createElement('button');
+                btn.className = 'panel-complete-btn';
+                btn.textContent = 'Mark as Complete';
+                btn.onclick = () => {
+                    markModuleComplete(node.id);
+                    renderPanelActions(node, topic);
+                };
+                panelActions.appendChild(btn);
+            } else if (status === 'COMPLETED') {
+                // Completed indicator
+                const doneBtn = document.createElement('button');
+                doneBtn.className = 'panel-complete-btn';
+                doneBtn.textContent = '✓ Completed';
+                doneBtn.disabled = true;
+                doneBtn.style.cssText = 'background:#111;color:#00ff88;border:2px solid #00ff88;cursor:default;box-shadow:none;';
+                panelActions.appendChild(doneBtn);
+
+                // Re-read button
+                const rereadBtn = document.createElement('button');
+                rereadBtn.className = 'panel-complete-btn';
+                rereadBtn.textContent = '⟲ Re-read Lesson';
+                rereadBtn.style.cssText = 'background:transparent;border:2px solid #444;color:#888;box-shadow:none;';
+                rereadBtn.onclick = () => {
+                    openLessonPanel(node, topic);
+                };
+                panelActions.appendChild(rereadBtn);
+            }
+
+            // Next chapter button (if child is available)
+            if (graphData && status === 'COMPLETED') {
+                const nextLink = graphData.links.find(l => {
+                    const src = typeof l.source === 'object' ? l.source.id : l.source;
+                    return src === node.id;
+                });
+                if (nextLink) {
+                    const tgtId = typeof nextLink.target === 'object' ? nextLink.target.id : nextLink.target;
+                    const nextNode = graphData.nodes.find(n => n.id === tgtId);
+                    if (nextNode) {
+                        const nextBtn = document.createElement('button');
+                        nextBtn.className = 'panel-complete-btn';
+                        nextBtn.innerHTML = `Next: ${nextNode.name} &rarr;`;
+                        nextBtn.style.cssText = 'background:#ffffff;color:#000000;border:none;';
+                        nextBtn.onclick = () => {
+                            if (nextNode.status === 'LOCKED') {
+                                alert('Please complete prerequisites first.');
+                                return;
+                            }
+                            openLessonPanel(nextNode, topic);
+                        };
+                        panelActions.appendChild(nextBtn);
+                    }
+                }
+            }
         };
 
         // Force immediate unlocking when a module is marked complete
@@ -823,7 +1277,10 @@
                 targetNode.status = "COMPLETED";
             }
 
-            // 2. Unlock the immediate next dependent nodes in the chain
+            // 2. Unlock the immediate next dependent nodes + persist to localStorage
+            const _tk = currentSearchTopic.replace(/\s+/g, '_').toLowerCase();
+            const _sp = JSON.parse(localStorage.getItem('la_progress_' + _tk) || '{}');
+            _sp[nodeId] = 'COMPLETED';
             graphData.links.forEach(link => {
                 const src = typeof link.source === 'object' ? link.source.id : link.source;
                 const tgt = typeof link.target === 'object' ? link.target.id : link.target;
@@ -831,9 +1288,11 @@
                     const nextNode = graphData.nodes.find(n => n.id === tgt);
                     if (nextNode && nextNode.status === "LOCKED") {
                         nextNode.status = "IN_PROGRESS";
+                        _sp[tgt] = 'IN_PROGRESS';
                     }
                 }
             });
+            localStorage.setItem('la_progress_' + _tk, JSON.stringify(_sp));
 
             // 3. FORCE DOM RE-RENDER: Instantly toggle the visual classes
             document.querySelectorAll('.node-card').forEach(card => {
@@ -847,15 +1306,28 @@
                     const statusClass = `node-${currentData.status.toLowerCase()}`;
                     card.classList.add(statusClass);
                     
-                    const desc = card.querySelector('p');
-                    if (desc) {
-                        desc.textContent = currentData.status.toLowerCase().replace('_', ' ');
+                    const badge = card.querySelector('.node-status-badge');
+                    if (badge) {
+                        badge.textContent = currentData.status.toLowerCase().replace('_', ' ');
+                        badge.style.color = currentData.status === 'COMPLETED' ? '#ffffff' : (currentData.status === 'IN_PROGRESS' ? '#aaaaaa' : '#444');
+                        if (currentData.isSpecial) badge.style.color = '#ff007f';
+                    }
+
+                    const title = card.querySelector('h3');
+                    if (title && currentData.isSpecial) {
+                        title.style.color = '#ff007f';
                     }
 
                     // Reset custom style overrides if unlocked
                     if (currentData.status !== "LOCKED") {
                         card.style.opacity = '';
                         card.style.cursor = '';
+                    }
+
+                    // Reinforce special borders
+                    if (currentData.isSpecial) {
+                        card.style.borderColor = '#ff007f';
+                        card.style.boxShadow = '4px 4px 0px #ff007f';
                     }
                 }
             });
@@ -904,6 +1376,22 @@
             };
             treeContainer.appendChild(backBtn);
 
+            // Regenerate button
+            const regenBtn = document.createElement('button');
+            regenBtn.className = 'back-btn';
+            regenBtn.textContent = '\u21ba Regenerate';
+            regenBtn.style.cssText = 'left:auto;right:1.5rem;top:1.5rem;';
+            regenBtn.onclick = () => {
+                treeContainer.style.display = 'none';
+                tutorPanel.classList.remove('open');
+                if (activeNodeEl) { activeNodeEl.classList.remove('is-active'); activeNodeEl = null; }
+                canvas.style.display = 'block';
+                document.querySelector('.container').style.display = 'block';
+                simulation.alpha(0.3).restart();
+                setTimeout(() => generateNewCurriculum(currentSearchTopic), 50);
+            };
+            treeContainer.appendChild(regenBtn);
+
             // SVG connector layer
             const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
             svg.id = 'connector-svg';
@@ -912,9 +1400,13 @@
             // Calculate levels and group rows
             const levels = calculateNodeLevels(json.nodes, json.links);
 
-            // Initialize status of each node if not set
+            // Initialize status — restore saved progress from localStorage if available
+            const _rtk = currentSearchTopic.replace(/\s+/g, '_').toLowerCase();
+            const _rsp = JSON.parse(localStorage.getItem('la_progress_' + _rtk) || '{}');
             json.nodes.forEach(n => {
-                if (!n.status) {
+                if (_rsp[n.id]) {
+                    n.status = _rsp[n.id];
+                } else if (!n.status) {
                     if (levels[n.id] === 0) {
                         n.status = "IN_PROGRESS";
                     } else {
@@ -940,16 +1432,34 @@
                     const status = node.status.toLowerCase();
                     const nodeEl = document.createElement('div');
                     nodeEl.className = `node-card node-${status}`;
+                    if (node.isSpecial) {
+                        nodeEl.classList.add('node-special');
+                        nodeEl.style.borderColor = '#ff007f';
+                        nodeEl.style.boxShadow = '4px 4px 0px #ff007f';
+                    }
                     nodeEl.id = `node-${node.id}`;
                     nodeEl.dataset.id = node.id; // Store ID for status updates
 
                     const titleEl = document.createElement('h3');
                     titleEl.textContent = node.name;
+                    if (node.isSpecial) {
+                        titleEl.style.color = '#ff007f';
+                    }
                     nodeEl.appendChild(titleEl);
 
                     const descEl = document.createElement('p');
-                    descEl.textContent = status.replace('_', ' ');
+                    const _desc = node.description || '';
+                    descEl.textContent = _desc.length > 55 ? _desc.substring(0, 52) + '...' : (_desc || status.replace('_', ' '));
+                    if (node.isSpecial) descEl.style.color = '#ff007f';
                     nodeEl.appendChild(descEl);
+
+                    // Status badge
+                    const badge = document.createElement('span');
+                    badge.className = 'node-status-badge';
+                    badge.textContent = status.replace('_', ' ');
+                    badge.style.color = status === 'completed' ? '#ffffff' : (status === 'in_progress' ? '#aaaaaa' : '#444');
+                    if (node.isSpecial) badge.style.color = '#ff007f';
+                    nodeEl.appendChild(badge);
 
                     // ── Hover: highlight connected SVG lines ──
                     nodeEl.addEventListener('mouseenter', () => {
@@ -981,9 +1491,32 @@
                     nodeEl.onclick = function(e) {
                         // STRICT OVERRIDE: Only block if it is explicitly locked and NOT in progress
                         if (nodeEl.classList.contains('node-locked') && !nodeEl.classList.contains('node-in_progress')) {
-                            // Mechanical shake rejection feedback
-                            nodeEl.style.transform = 'translateX(4px)';
-                            setTimeout(() => nodeEl.style.transform = 'translateX(0)', 50);
+                            // Find prerequisite nodes
+                            const prereqs = (graphData ? graphData.links : [])
+                                .filter(l => (typeof l.target === 'object' ? l.target.id : l.target) === node.id)
+                                .map(l => {
+                                    const srcId = typeof l.source === 'object' ? l.source.id : l.source;
+                                    const srcNode = graphData.nodes.find(n => n.id === srcId);
+                                    return srcNode ? srcNode.name : srcId;
+                                });
+
+                            // Remove existing tooltip
+                            const existingTip = document.querySelector('.locked-tooltip');
+                            if (existingTip) existingTip.remove();
+
+                            const tip = document.createElement('div');
+                            tip.className = 'locked-tooltip';
+                            tip.innerHTML = `🔒 Complete <strong>${prereqs.length > 0 ? prereqs.slice(0,2).join(' or ') : 'a previous module'}</strong> first to unlock this.`;
+                            document.body.appendChild(tip);
+
+                            const rect = nodeEl.getBoundingClientRect();
+                            tip.style.left = Math.max(8, rect.left + rect.width / 2 - tip.offsetWidth / 2) + 'px';
+                            tip.style.top  = (rect.top - tip.offsetHeight - 10) + 'px';
+                            setTimeout(() => tip && tip.remove(), 2800);
+
+                            // Shake
+                            nodeEl.classList.add('shaking');
+                            setTimeout(() => nodeEl.classList.remove('shaking'), 400);
                             return;
                         }
 
@@ -1054,15 +1587,35 @@
             panelBody.innerHTML = `
                 <p class="panel-terminal-line">> INITIATING GEMINI AI...</p>
                 <p class="panel-terminal-line">> TOPIC: ${query.toUpperCase()}</p>
+                <div class="gen-progress-bar"><div class="gen-progress-fill" id="gen-progress-fill"></div></div>
+                <p class="panel-terminal-line" style="color:#555;font-size:0.8rem;">> Estimated: ~15 seconds</p>
                 <p class="panel-terminal-line blink">> [ BUILDING CURRICULUM... ]</p>
             `;
-            completeBtn.style.display = 'none';
+            panelActions.innerHTML = '';
             tutorPanel.classList.add('open');
+
+            // Animate progress bar
+            let _progressPct = 0;
+            let _progressFill = document.getElementById('gen-progress-fill');
+            let _progressInterval = setInterval(() => {
+                if (_progressFill && _progressPct < 88) {
+                    _progressPct += (88 - _progressPct) * 0.05;
+                    _progressFill.style.width = _progressPct.toFixed(1) + '%';
+                }
+            }, 400);
+
+            const isFirstSearch = !sessionStorage.getItem('la_first_search_done');
+            if (isFirstSearch) {
+                sessionStorage.setItem('la_first_search_done', 'true');
+            }
 
             fetch(API_BASE + '/api/generate-path', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ topic: query })
+                body: JSON.stringify({ 
+                    topic: query,
+                    firstSearch: isFirstSearch
+                })
             })
                 .then(response => {
                     if (!response.ok) throw new Error('Network response was not ok: ' + response.statusText);
@@ -1098,8 +1651,17 @@
 
                         // 5. Parse and render
                         const parsedData = JSON.parse(cleanJsonText);
+                        if (parsedData.error) {
+                            throw new Error(parsedData.error);
+                        }
+                        if (!parsedData.nodes || !parsedData.links) {
+                            throw new Error("Invalid curriculum response structure from server.");
+                        }
                         document.querySelector('.container').style.display = 'none';
                         renderGraph(parsedData);
+                        // Persist topic to localStorage for resume-on-load feature
+                        localStorage.setItem('la_topic', query);
+                        if (_progressFill) _progressFill.style.width = '100%';
 
                     } catch (parseError) {
                         console.error("JSON Parse Failure: ", parseError);
@@ -1120,6 +1682,7 @@
                     tutorPanel.classList.add('open');
                 })
                 .finally(() => {
+                    clearInterval(_progressInterval);
                     queryInput.disabled = false;
                     submitButton.disabled = false;
                     queryInput.placeholder = originalPlaceholder;
@@ -1132,6 +1695,112 @@
             e.preventDefault();
             const queryInput = document.getElementById('search-query');
             generateNewCurriculum(queryInput.value.trim());
+        });
+
+        // fillSearch: used by suggestion chips to populate the search input
+        function fillSearch(topic) {
+            const input = document.getElementById('search-query');
+            input.value = topic;
+            input.focus();
+        }
+
+        function triggerBoredFeature() {
+            const assetsPool = [
+                // Genuinely interesting topics to auto-generate curriculum for
+                { type: 'topic', title: 'Chaos Theory' },
+                { type: 'topic', title: 'The Fermi Paradox' },
+                { type: 'topic', title: 'Game Theory' },
+                { type: 'topic', title: 'Cognitive Biases' },
+                { type: 'topic', title: 'Cryptography' },
+                { type: 'topic', title: 'Philosophy of Mind' },
+                { type: 'topic', title: 'Evolutionary Biology' },
+                { type: 'topic', title: 'Linguistics' },
+                { type: 'topic', title: 'Behavioral Economics' },
+                { type: 'topic', title: 'Ancient Rome' },
+                { type: 'url', url: 'https://neal.fun/deep-sea/', title: 'The Deep Sea — Interactive Dive' },
+                { type: 'url', url: 'https://ourworldindata.org', title: 'Our World In Data — Visualize Everything' },
+                { type: 'url', url: 'https://en.m.wikipedia.org/wiki/Special:Random', title: 'Random Wikipedia Article' },
+                { type: 'quote', text: '"The unexamined life is not worth living." — Socrates' },
+                { type: 'quote', text: '"We are what we repeatedly do. Excellence, then, is not an act, but a habit." — Aristotle' },
+                { type: 'quote', text: '"The measure of intelligence is the ability to change." — Einstein' },
+                { type: 'quote', text: '"In the middle of difficulty lies opportunity." — Einstein' },
+                { type: 'quote', text: '"The only true wisdom is in knowing you know nothing." — Socrates' },
+            ];
+
+            const randomItem = assetsPool[Math.floor(Math.random() * assetsPool.length)];
+
+            const _tp = document.getElementById('tutor-panel');
+            const _pTitle = document.getElementById('panel-title');
+            const _pBody = document.getElementById('panel-body');
+            document.getElementById('panel-actions').innerHTML = '';
+
+            const surpriseBtn = `<button onclick="triggerBoredFeature()" style="margin-top:20px;padding:10px 20px;background:none;border:2px solid #ff007f;color:#ff007f;font-family:inherit;font-weight:800;text-transform:uppercase;cursor:pointer;font-size:0.85rem;display:block;">&#8635; Surprise Me Again</button>`;
+
+            if (randomItem.type === 'quote') {
+                _pTitle.textContent = '\U0001f4a1 Random Wisdom';
+                _pBody.innerHTML = '<p style="font-size:1.3rem;font-style:italic;line-height:1.7;margin-top:2rem;color:#ff007f;">' + randomItem.text + '</p>' + surpriseBtn;
+            } else if (randomItem.type === 'url') {
+                _pTitle.textContent = '\U0001f3af Something to Explore';
+                _pBody.innerHTML = '<p style="font-size:1.1rem;margin-top:1.5rem;color:#fff;">' + randomItem.title + '</p><a href="' + randomItem.url + '" target="_blank" style="display:inline-block;background:#ff007f;color:#000;padding:12px 24px;text-decoration:none;margin-top:1rem;font-weight:800;font-family:monospace;">[ Open ]</a>' + surpriseBtn;
+            } else if (randomItem.type === 'topic') {
+                _pTitle.textContent = '\U0001f680 Random Rabbit Hole';
+                _pBody.innerHTML = '<p style="font-size:1rem;margin-top:1.5rem;color:#888;">How about learning:</p><p style="font-size:1.5rem;font-weight:800;margin-top:0.5rem;color:#fff;">' + randomItem.title + '</p><button onclick="document.getElementById(\'tutor-panel\').classList.remove(\'open\'); generateNewCurriculum(\'' + randomItem.title + '\');" style="margin-top:1.5rem;padding:12px 24px;background:#ff007f;color:#000;border:none;font-family:inherit;font-weight:800;text-transform:uppercase;cursor:pointer;font-size:1rem;display:block;">Generate Curriculum</button>' + surpriseBtn;
+            }
+
+            _tp.classList.add('open');
+        }
+
+        // Keyboard Navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                // Close tutor panel
+                const tp = document.getElementById('tutor-panel');
+                if (tp && tp.classList.contains('open')) {
+                    tp.classList.remove('open');
+                    document.querySelectorAll('.node-card').forEach(n => n.classList.remove('is-active'));
+                }
+                // Dismiss any locked tooltip
+                const tip = document.querySelector('.locked-tooltip');
+                if (tip) tip.remove();
+            }
+        });
+
+        // Resume Last Session on Page Load
+        window.addEventListener('load', () => {
+            const savedTopic = localStorage.getItem('la_topic');
+            if (!savedTopic) return;
+
+            const banner = document.createElement('div');
+            banner.id = 'resume-banner';
+
+            const label = document.createElement('span');
+            label.style.color = '#888';
+            label.innerHTML = 'Resume: <strong style="color:#fff;">' + savedTopic + '</strong>?';
+
+            const resumeBtn = document.createElement('button');
+            resumeBtn.textContent = 'Resume';
+            resumeBtn.style.cssText = 'background:#fff;color:#000;border:none;padding:0.4rem 0.9rem;font-weight:800;text-transform:uppercase;cursor:pointer;font-family:inherit;font-size:0.8rem;';
+            resumeBtn.onclick = () => { banner.remove(); generateNewCurriculum(savedTopic); };
+
+            const clearBtn = document.createElement('button');
+            clearBtn.textContent = 'Clear';
+            clearBtn.style.cssText = 'background:none;border:none;color:#444;cursor:pointer;font-family:inherit;font-size:0.75rem;text-decoration:underline;';
+            clearBtn.onclick = () => {
+                localStorage.removeItem('la_topic');
+                localStorage.removeItem('la_progress_' + savedTopic.replace(/\s+/g, '_').toLowerCase());
+                banner.remove();
+            };
+
+            const dismissBtn = document.createElement('button');
+            dismissBtn.innerHTML = '&times;';
+            dismissBtn.style.cssText = 'background:none;border:none;color:#555;cursor:pointer;font-size:1.4rem;line-height:1;padding:0;';
+            dismissBtn.onclick = () => banner.remove();
+
+            banner.appendChild(label);
+            banner.appendChild(resumeBtn);
+            banner.appendChild(clearBtn);
+            banner.appendChild(dismissBtn);
+            document.body.appendChild(banner);
         });
     </script>
 </body>

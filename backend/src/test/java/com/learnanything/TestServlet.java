@@ -22,7 +22,7 @@ public class TestServlet {
                     .connectTimeout(Duration.ofSeconds(10))
                     .build();
 
-            String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=" + apiKey;
+            String geminiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=" + apiKey;
 
             String prompt = "Generate a structured learning path for learning: " + escapeJson(topic) + 
                     ". You must return a JSON object containing a list of nodes and links. Schema: { \"nodes\": [{ \"id\": \"string\", \"name\": \"string\", \"description\": \"string\" }], \"links\": [{ \"source\": \"string\", \"target\": \"string\" }] }";

@@ -1,0 +1,30 @@
+{
+  "family": "learnanything-task",
+  "networkMode": "awsvpc",
+  "containerDefinitions": [
+    {
+      "name": "learnanything-container",
+      "image": "816940507016.dkr.ecr.ap-south-1.amazonaws.com/thesnipteers:latest",
+      "portMappings": [
+        {
+          "containerPort": 8080,
+          "hostPort": 8080,
+          "protocol": "tcp"
+        }
+      ],
+      "essential": true,
+      "environment": [
+        {
+          "name": "GOOGLE_API_KEY",
+          "value": "GOOGLE_API_KEY_PLACEHOLDER"
+        }
+      ]
+    }
+  ],
+  "requiresCompatibilities": [
+    "FARGATE"
+  ],
+  "cpu": "1024",
+  "memory": "2048",
+  "executionRoleArn": "EXECUTION_ROLE_ARN_PLACEHOLDER"
+}
