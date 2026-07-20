@@ -219,11 +219,12 @@ public class GeneratePathServlet extends HttpServlet {
                 }
             }
             
+            if (response == null) {
+                throw new Exception("Gemini API returned null response");
+            }
+
             if (response.statusCode() != 200) {
-                resp.setStatus(response.statusCode());
-                resp.setContentType("application/json");
-                resp.getWriter().write("{\"error\": \"Gemini API returned error: " + escapeJson(response.body()) + "\"}");
-                return;
+                throw new Exception("Gemini API returned error: " + response.body());
             }
 
             String responseBody = response.body();
