@@ -1,225 +1,140 @@
 <div align="center">
 
-# 🚀 Learn Anything
-### AI-Powered Personalized Curriculum Engine
+# 🏛️ EPISTEME (ἐπιστήμη)
+### AI-Powered Knowledge Architecture & Interactive Curriculum Engine
 
-Generate an interactive learning roadmap for **any subject**, powered by **Google Gemini**.  
-Explore concepts through a dynamic knowledge graph and learn every topic with AI-generated Feynman-style explanations.
+*Transform any subject into a structured 3-tier knowledge graph with AI-generated Feynman learning pathways.*
 
-![Java](https://img.shields.io/badge/Java-21-orange)
-![Jakarta EE](https://img.shields.io/badge/Jakarta%20EE-10-red)
-![Gemini](https://img.shields.io/badge/Google-Gemini%203.5-blue)
-![AWS](https://img.shields.io/badge/AWS-App%20Runner-yellow)
+[**Live Demo**](http://15.206.28.127:8080) • [**Technical Report**](./PROJECT_REPORT.md) • [**GitHub Repo**](https://github.com/Hollow240/TheSnipteers.git)
+
+![Java](https://img.shields.io/badge/Java-17-orange)
+![Jakarta Servlets](https://img.shields.io/badge/Jakarta%20Servlets-6.0-red)
+![Google Gemini](https://img.shields.io/badge/Google-Gemini%203.1%20Flash%20Lite-blue)
+![AWS ECS Fargate](https://img.shields.io/badge/AWS-ECS%20Fargate-yellow)
+![Amazon ECR](https://img.shields.io/badge/Amazon-ECR-blue)
 ![Docker](https://img.shields.io/badge/Docker-Containerized-blue)
+![D3.js](https://img.shields.io/badge/D3.js-v7-green)
 
 </div>
 
 ---
 
-# 📖 Overview
+## 📖 Overview
 
-**Learn Anything** is an AI-driven curriculum engine that transforms any learning goal into a structured, interactive roadmap.
+**Episteme** *(from Ancient Greek ἐπιστήμη — meaning true, deep, structured knowledge)* is a cloud-native web application designed to eliminate unstructured information searching. 
 
-Instead of searching through dozens of tutorials and videos, simply enter a topic and the application generates a complete prerequisite graph using **Gemini 3.5 Flash**.
-
-Each concept becomes an interactive node that can be explored individually. Selecting a node opens an AI tutor capable of explaining the topic using the **Feynman Technique**, making difficult concepts easier to understand.
+Instead of wading through disjointed tutorials, typing any topic into Episteme generates a **3-tier Directed Acyclic Graph (DAG)** mapping out beginner, intermediate, and advanced prerequisites. Selecting any node launches an interactive AI tutor that delivers explanations using the **Feynman Technique** (*The Hook*, *The Core Concept*, *The Mental Model*, and *Active Recall*).
 
 ---
 
-# ✨ Features
+## ✨ Key Features
 
-### 🧠 AI Curriculum Generation
-- Generates structured learning roadmaps for any topic
-- Creates prerequisite relationships as a Directed Acyclic Graph (DAG)
-- Prevents cyclic dependencies for logical learning progression
+### 🧠 AI Curriculum Architecture & 3-Tier DAG
+- **Progressive Skill Mapping**: Converts complex topics into 20–25 node Directed Acyclic Graphs (DAGs).
+- **3 Learning Tiers**: Automatically partitions knowledge into **Beginner (Tier 1)**, **Intermediate (Tier 2)**, and **Advanced (Tier 3)**.
+- **Dynamic Unlock Progression**: Sets Tier 1 nodes to `IN_PROGRESS` and dependent downstream concepts to `LOCKED` until prerequisites are met.
 
-### 🌐 Interactive Knowledge Graph
-- Dynamic D3.js force-directed visualization
-- Drag, zoom and explore relationships
-- Visual prerequisite mapping
+### 📚 Pedagogical Core — Feynman Learning Engine
+- **The Hook**: Connects abstract sub-topics to everyday scenarios.
+- **The Core Concept**: Explains foundational mechanics in plain, jargon-free English.
+- **The Mental Model**: Provides clear visual and conceptual analogies.
+- **Active Recall**: Delivers self-testing questions to solidify long-term memory retention.
 
-### 📚 AI Tutor
-- Context-aware explanations
-- Feynman-style teaching
-- Beginner-friendly lessons
-- Builds on previously learned concepts
+### 🌐 100-Node Constellation Landing Web
+- **Dual-Wing Interactive Graph**: Rendered using **D3.js v7** with physics force simulation.
+- **Balanced Partitioning**: Features 50 Tech & Physical Science nodes (*Left Wing*) and 50 Humanities & Life Science nodes (*Right Wing*).
+- **Center-Avoidance Physics**: Damped force attraction keeps the center search container clean and legible.
+- **System "Bored?" Routine**: Integrated `⚠️ BORED?` system node providing curated cognitive breaks and educational distractions.
 
-### ⚡ Real-Time Streaming
-- Server-Sent Events (SSE)
-- Progressive content generation
-- No waiting for entire responses
-
-### ☁ Cloud Ready
-- Docker containerization
-- AWS App Runner deployment
-- Environment-based API key management
+### ⚡ Hybrid Performance Architecture & Resilience
+- **35ms Instant First-Search**: Client-side `sessionStorage` tracking (`firstSearch: true`) routes the user's initial query to a 35ms in-memory layout generator.
+- **Exponential Backoff**: Automated retries (2s → 4s → 8s) to mitigate LLM API rate limits (HTTP 429).
+- **Bulletproof Fallback**: Automatic local curriculum fallback guarantees 100% uptime and zero application freezes.
 
 ---
 
-# 🏗 Architecture
+## 🏗 Architecture
 
 ```
-                    User
-                      │
-                      ▼
-          HTML + JavaScript + D3.js
-                      │
-             Server Sent Events
-                      │
-                      ▼
-          Jakarta EE Java Servlets
-                      │
-          Google Gen AI SDK
-                      │
-                      ▼
-             Gemini 3.5 Flash
-                      │
-                      ▼
-      Learning DAG + AI Explanations
+                                 User Browser
+                                      │
+                         ┌────────────┴────────────┐
+                         │   HTML5 / CSS3 / JS     │
+                         │    (D3.js v7 Physics)   │
+                         └────────────┬────────────┘
+                                      │
+                    HTTP POST (/api/generate-path, /api/get-lesson)
+                                      │
+                         ┌────────────▼────────────┐
+                         │  Java 17 Jakarta Servlets│
+                         │    (Embedded Tomcat)    │
+                         └────────────┬────────────┘
+                                      │
+                     Google Generative Language REST API
+                                      │
+                         ┌────────────▼────────────┐
+                         │ Gemini 3.1 Flash Lite   │
+                         └─────────────────────────┘
 ```
 
 ---
 
-# ⚙ Tech Stack
+## ⚙️ Tech Stack
 
-| Layer | Technology |
-|--------|------------|
-| Frontend | HTML5, CSS3, JavaScript |
-| Visualization | D3.js |
-| Backend | Java Servlets (Jakarta EE) |
-| AI | Google Gemini 3.5 Flash |
-| Streaming | Server-Sent Events (SSE) |
-| Containerization | Docker |
-| Deployment | AWS App Runner |
-
----
-
-# 🚀 How It Works
-
-1. Enter any topic.
-2. The backend sends a prompt to Gemini.
-3. Gemini generates a structured prerequisite graph.
-4. The graph is rendered using D3.js.
-5. Clicking any node requests a detailed AI explanation.
-6. Responses stream back live through SSE.
+| Layer | Technology | Description |
+| :--- | :--- | :--- |
+| **Frontend** | HTML5, Vanilla CSS, Vanilla JavaScript | Zero-framework client interface |
+| **Visualization** | D3.js v7 | 100-node physics-based constellation graph |
+| **Backend** | Java 17 & Jakarta Servlets | Lightweight JDK 17 REST API container |
+| **Web Server** | Embedded Apache Tomcat | Listens on port `8080` |
+| **Build Tool** | Apache Maven | Package dependency & assembly build |
+| **AI Model** | Google Gemini 3.1 Flash Lite | `gemini-3.1-flash-lite` |
+| **Container** | Docker (Alpine JRE 17) | Lightweight container base |
+| **Cloud Hosting** | AWS ECS on Fargate & Amazon ECR | Serverless cloud container infrastructure |
 
 ---
 
-# 📂 Project Structure
+## 🛠️ Running Locally
 
-```
-learn-anything/
-│
-├── frontend/
-│   ├── index.html
-│   ├── app.js
-│   └── styles.css
-│
-├── backend/
-│   ├── servlets/
-│   ├── services/
-│   └── models/
-│
-├── Dockerfile
-├── pom.xml
-└── README.md
-```
-
----
-
-# 🔐 Security
-
-Sensitive credentials are **never committed** to the repository.
-
-The application uses runtime environment variables:
-
+### 1. Clone Repository
 ```bash
-GOOGLE_API_KEY=your_api_key
+git clone https://github.com/Hollow240/TheSnipteers.git
+cd TheSnipteers
 ```
 
-This configuration works seamlessly with Docker and AWS App Runner.
-
----
-
-# 🛠 Running Locally
-
-## Clone
-
+### 2. Set API Key
 ```bash
-git clone https://github.com/yourusername/learn-anything.git
-cd learn-anything
+export GOOGLE_API_KEY=your_gemini_api_key
 ```
-
-## Set Environment Variable
-
-```bash
-export GOOGLE_API_KEY=YOUR_API_KEY
-```
-
-or on Windows
-
+*(Windows PowerShell)*:
 ```powershell
-set GOOGLE_API_KEY=YOUR_API_KEY
+$env:GOOGLE_API_KEY="your_gemini_api_key"
 ```
 
-## Build
-
+### 3. Build & Run
 ```bash
 mvn clean package
+java -jar backend/target/backend-1.0.0-SNAPSHOT-jar-with-dependencies.jar
 ```
-
-## Run
-
-Deploy the generated WAR to your Jakarta EE server (Tomcat/Jetty compatible) or run using Docker.
+Access the application at `http://localhost:8080`.
 
 ---
 
-# 📸 Screenshots
+## ☁️ Deploying to AWS ECS Fargate
 
-> Add screenshots or GIFs here.
+The project includes an automated PowerShell deployment script (`deploy.ps1`):
 
-```
-Landing Page
-```
+```powershell
+$env:GOOGLE_API_KEY="your_api_key"
+$env:ECS_ROLE_ARN="arn:aws:iam::YOUR_ACCOUNT_ID:role/ecsTaskExecutionRole"
+$env:SUBNETS="subnet-xxxxxx"
+$env:SECURITY_GROUP="sg-xxxxxx"
 
-```
-Knowledge Graph
-```
-
-```
-AI Tutor
+.\deploy.ps1
 ```
 
 ---
 
-# 🎯 Future Improvements
+## 📄 Documentation
 
-- User accounts
-- Progress tracking
-- Learning analytics
-- Quiz generation
-- Flashcards
-- Spaced repetition
-- PDF export
-- Multi-language support
-- Collaborative learning paths
-
----
-
-# 🤝 Contributing
-
-Contributions, feature requests, and pull requests are welcome.
-
----
-
-# 📜 License
-
-This project is licensed under the MIT License.
-
----
-
-<div align="center">
-
-**Build knowledge visually. Learn intelligently.**
-
-</div>
+For full architectural diagrams, prompt engineering strategies, and performance benchmarks, see the **[PROJECT_REPORT.md](./PROJECT_REPORT.md)** document.
